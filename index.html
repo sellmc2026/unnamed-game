@@ -291,34 +291,6 @@
     // ============================================================
 
 
-    let stabilityTimer = null;
-    let lastLocation = null;
-    
-    function handleLocationUpdate(newLocation) {
-      // 1. Clear the previous timer because a new move/update occurred
-      clearTimeout(stabilityTimer);
-    
-      // 2. Update the tracking reference
-      lastLocation = newLocation;
-    
-      // 3. Start a new 20ms countdown
-      stabilityTimer = setTimeout(() => {
-        // This only fires if 20ms pass without another handleLocationUpdate call
-        onLocationStabilized(lastLocation);
-      }, 20);
-    }
-    
-    function onLocationStabilized(stableLocation) {
-      if (player.facing === "down") {
-        sprite = maleFacingDown;
-      } else if (player.facing === "up") {
-        sprite = maleFacingUp;
-      } else if (player.facing === "left") {
-        sprite = maleFacingLeft;
-      } else if (player.facing === "right") {
-        sprite = maleFacingRight;
-      }
-    }
 
     
 
@@ -344,6 +316,32 @@
       const py = Math.floor(screenY - size + 4);
     
       let sprite;
+
+      const isWalking =
+        keys.has("KeyW") ||
+        keys.has("KeyA") ||
+        keys.has("KeyS") ||
+        keys.has("KeyD") ||
+        keys.has("ArrowUp") ||
+        keys.has("ArrowDown") ||
+        keys.has("ArrowLeft") ||
+        keys.has("ArrowRight");
+
+      if (!isWalking) {
+        // Player is standing still
+        sprite = maleIdle;
+      } else {
+        // Player is walking
+        if (player.facing === "down") {
+          sprite = maleFacingDown;
+        } else if (player.facing === "up") {
+          sprite = maleFacingUp;
+        } else if (player.facing === "left") {
+          sprite = maleFacingLeft;
+        } else if (player.facing === "right") {
+          sprite = maleFacingRight;
+        }
+      }
 
       
     
