@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,7 +7,9 @@
   <title>Pixel Pet Game</title>
 
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     html, body {
       width: 100%;
@@ -38,6 +41,11 @@
 
     const WALK_SPEED = 80;
     const SPRINT_SPEED = 115;
+
+    const PLAYER_SPRITE_SIZE = 32;
+
+    // Change walking frame every half tile traveled.
+    const WALK_FRAME_DISTANCE = TILE_SIZE / 2;
 
     const PLOT_COLUMNS = 5;
     const PLOT_ROWS = 5;
@@ -82,22 +90,129 @@
       y: -16,
       width: 12,
       height: 6,
-      facing: "down"
+      facing: "down",
+
+      moving: false,
+      walkDistance: 0,
+      walkFrame: 0
     };
 
-    const pedestalTexture = new Image();
-    pedestalTexture.src = "textures/solid/pedestal-vacant.png";
+    // ============================================================
+    // LOAD TEXTURES
+    // ============================================================
+    function loadImage(path) {
+      const img = new Image();
 
-    const grassTexture = new Image();
-    grassTexture.src = "tiles/grass-full.png";
+      img.onerror = () => {
+        console.error("Could not load image:", path);
+      };
 
-    pedestalTexture.onerror = () => {
-      console.error("Could not load pedestal-vacant.png");
+      img.src = path;
+      return img;
+    }
+
+    const pedestalTexture = loadImage(
+      "textures/solid/pedestal-vacant.png"
+    );
+
+    const grassTexture = loadImage(
+      "tiles/grass-full.png"
+    );
+
+    // ============================================================
+    // PLAYER SPRITES
+    // ============================================================
+
+    // Facing down
+    const maleIdleDown = loadImage(
+      "characters/male/male-idle-forward.png"
+    );
+
+    const maleWalkingDown1 = loadImage(
+      "characters/male/male-forward-walking-1.png"
+    );
+
+    const maleWalkingDown2 = loadImage(
+      "characters/male/male-forward-walking-2.png"
+    );
+
+    // Facing up
+    const maleIdleUp = loadImage(
+      "characters/male/male-backward-idle.png"
+    );
+
+    const maleWalkingUp1 = loadImage(
+      "characters/male/male-backward-walking-1.png"
+    );
+
+    const maleWalkingUp2 = loadImage(
+      "characters/male/male-backward-walking-2.png"
+    );
+
+    // Facing left
+    const maleWalkingLeft1 = loadImage(
+      "characters/male/male-walking-left-1.png"
+    );
+
+    const maleWalkingLeft2 = loadImage(
+      "characters/male/male-walking-left-2.png"
+    );
+
+    // Facing right
+    const maleWalkingRight1 = loadImage(
+      "characters/male/male-walking-right-1.png"
+    );
+
+    const maleWalkingRight2 = loadImage(
+      "characters/male/male-walking-right-2.png"
+    );
+
+    const playerSprites = {
+      down: {
+        idle: maleIdleDown,
+        walking: [
+          maleWalkingDown1,
+          maleWalkingDown2
+        ]
+      },
+
+      up: {
+        idle: maleIdleUp,
+        walking: [
+          maleWalkingUp1,
+          maleWalkingUp2
+        ]
+      },
+
+      left: {
+        idle: maleWalkingLeft1,
+        walking: [
+          maleWalkingLeft1,
+          maleWalkingLeft2
+        ]
+      },
+
+      right: {
+        idle: maleWalkingRight1,
+        walking: [
+          maleWalkingRight1,
+          maleWalkingRight2
+        ]
+      }
     };
 
+    // ============================================================
+    // RESIZE
+    // ============================================================
     function resize() {
-      canvas.width = Math.ceil(window.innerWidth / PIXEL_SCALE);
-      canvas.height = Math.ceil(window.innerHeight / PIXEL_SCALE);
+      canvas.width = Math.ceil(
+        window.innerWidth / PIXEL_SCALE
+      );
+
+      canvas.height = Math.ceil(
+        window.innerHeight / PIXEL_SCALE
+      );
+
       ctx.imageSmoothingEnabled = false;
     }
 
@@ -108,42 +223,87 @@
     // GROUND
     // ============================================================
     function hash(x, y) {
-      let h = Math.imul(x, 374761393) + Math.imul(y, 668265263);
-      h = Math.imul(h ^ (h >>> 13), 1274126177);
+      let h =
+        Math.imul(x, 374761393) +
+        Math.imul(y, 668265263);
+
+      h = Math.imul(
+        h ^ (h >>> 13),
+        1274126177
+      );
+
       return (h ^ (h >>> 16)) >>> 0;
     }
 
     function drawGround(cameraX, cameraY) {
+      // Background while grass texture loads.
+      ctx.fillStyle = "#79a66e";
+      ctx.fillRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+
       const left = Math.floor(cameraX / TILE_SIZE);
       const top = Math.floor(cameraY / TILE_SIZE);
-      const right = Math.floor((cameraX + canvas.width) / TILE_SIZE) + 1;
-      const bottom = Math.floor((cameraY + canvas.height) / TILE_SIZE) + 1;
+
+      const right = Math.floor(
+        (cameraX + canvas.width) / TILE_SIZE
+      ) + 1;
+
+      const bottom = Math.floor(
+        (cameraY + canvas.height) / TILE_SIZE
+      ) + 1;
+
+      const textureReady =
+        grassTexture.complete &&
+        grassTexture.naturalWidth > 0;
 
       for (let ty = top; ty <= bottom; ty++) {
         for (let tx = left; tx <= right; tx++) {
-          const px = Math.floor(tx * TILE_SIZE - cameraX);
-          const py = Math.floor(ty * TILE_SIZE - cameraY);
+          const px = Math.floor(
+            tx * TILE_SIZE - cameraX
+          );
+
+          const py = Math.floor(
+            ty * TILE_SIZE - cameraY
+          );
+
           const n = hash(tx, ty);
 
-          
-          if (grassTexture.complete && grassTexture.naturalWidth > 0) {
-              ctx.drawImage(grassTexture, px, py, TILE_SIZE + 30, TILE_SIZE + 30);
+          if (textureReady) {
+            ctx.drawImage(
+              grassTexture,
+              px,
+              py,
+              TILE_SIZE,
+              TILE_SIZE
+            );
           }
 
           if (n % 13 === 0) {
             ctx.fillStyle = "#98ba7b";
-            ctx.fillRect(px + 6, py + 9, 2, 3);
+            ctx.fillRect(
+              px + 6,
+              py + 9,
+              2,
+              3
+            );
           }
 
           if (n % 23 === 0) {
             ctx.fillStyle = "#648e5e";
-            ctx.fillRect(px + 17, py + 15, 2, 2);
+            ctx.fillRect(
+              px + 11,
+              py + 12,
+              2,
+              2
+            );
           }
         }
       }
     }
-
-    
 
     // ============================================================
     // PLOTS AND PEDESTALS
@@ -175,16 +335,25 @@
 
       for (let plotY = firstY; plotY <= lastY; plotY++) {
         for (let plotX = firstX; plotX <= lastX; plotX++) {
-          const worldX = PLOT_ORIGIN_X + plotX * PLOT_STEP_X;
-          const worldY = PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y;
+          const worldX =
+            PLOT_ORIGIN_X + plotX * PLOT_STEP_X;
+
+          const worldY =
+            PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y;
 
           const x = Math.floor(worldX - cameraX);
           const y = Math.floor(worldY - cameraY);
 
-          // Draw plot floors only on the background pass.
+          // Draw plot floors on background pass.
           if (!foreground) {
             ctx.fillStyle = PLOT_COLOR;
-            ctx.fillRect(x, y, PLOT_WIDTH, PLOT_HEIGHT);
+
+            ctx.fillRect(
+              x,
+              y,
+              PLOT_WIDTH,
+              PLOT_HEIGHT
+            );
           }
 
           if (!textureReady) continue;
@@ -199,22 +368,29 @@
                 PLOT_PADDING + row * PEDESTAL_STEP
               ) * TILE_SIZE;
 
-              // Bottom of the pedestal's ground tile.
-              const pedestalFeetY = worldY + tileY + TILE_SIZE;
+              // Pedestal's original ground position.
+              const pedestalFeetY =
+                worldY + tileY + TILE_SIZE;
 
-              // Lower objects render over higher objects.
-              const inFrontOfPlayer = pedestalFeetY > player.y;
+              // Draw lower objects in front of player.
+              const inFrontOfPlayer =
+                pedestalFeetY > player.y;
 
-              if (inFrontOfPlayer !== foreground) continue;
+              if (inFrontOfPlayer !== foreground) {
+                continue;
+              }
 
-              // Enlarge while keeping the pedestal centered
-              // and its bottom anchored to its original tile.
               const px = Math.round(
-                x + tileX - (pedestalSize - TILE_SIZE) / 2
+                x +
+                tileX -
+                (pedestalSize - TILE_SIZE) / 2
               );
 
               const py = Math.round(
-                y + tileY + TILE_SIZE - pedestalSize
+                y +
+                tileY +
+                TILE_SIZE -
+                pedestalSize
               );
 
               ctx.drawImage(
@@ -251,12 +427,18 @@
       );
 
       // Grass outside plots has no collision.
-      if (localX >= PLOT_WIDTH || localY >= PLOT_HEIGHT) {
+      if (
+        localX >= PLOT_WIDTH ||
+        localY >= PLOT_HEIGHT
+      ) {
         return false;
       }
 
-      const colTile = Math.floor(localX / TILE_SIZE) - PLOT_PADDING;
-      const rowTile = Math.floor(localY / TILE_SIZE) - PLOT_PADDING;
+      const colTile =
+        Math.floor(localX / TILE_SIZE) - PLOT_PADDING;
+
+      const rowTile =
+        Math.floor(localY / TILE_SIZE) - PLOT_PADDING;
 
       const isPedestal =
         colTile >= 0 &&
@@ -271,7 +453,9 @@
       // Only the bottom portion of the tile is solid.
       const pixelY = localY % TILE_SIZE;
 
-      return pixelY >= TILE_SIZE - PEDESTAL_HITBOX_HEIGHT;
+      return pixelY >= (
+        TILE_SIZE - PEDESTAL_HITBOX_HEIGHT
+      );
     }
 
     function canMoveTo(x, y) {
@@ -287,82 +471,62 @@
     }
 
     // ============================================================
-    // PLAYER
+    // PLAYER SPRITE SELECTION
     // ============================================================
+    function getPlayerSprite() {
+      const sprites = playerSprites[player.facing];
 
+      if (!sprites) {
+        return maleIdleDown;
+      }
 
+      // Standing still: show idle sprite.
+      if (!player.moving) {
+        return sprites.idle;
+      }
 
-    
+      // Moving: alternate between walking frames.
+      const sprite = sprites.walking[player.walkFrame];
 
-    const maleFacingDown = new Image();
-    maleFacingDown.src = "characters/male/male-idle-forward.png";
-    
-    const maleFacingUp = new Image();
-    maleFacingUp.src = "characters/male/male-backward-idle.png";
-    
-    let maleFacingLeft = new Image();
-    maleFacingLeft.src = "characters/male/male-walking-left-1.png";
-    
-    let maleFacingRight = new Image();
-    maleFacingRight.src = "characters/male/male-walking-right-1.png";
-    
-    ctx.imageSmoothingEnabled = false;
+      // Fallback if an animation PNG is missing.
+      if (
+        sprite.complete &&
+        sprite.naturalWidth > 0
+      ) {
+        return sprite;
+      }
 
-    
+      return sprites.walking[0];
+    }
+
+    // ============================================================
+    // DRAW PLAYER
+    // ============================================================
     function drawPlayer(screenX, screenY) {
-      const size = 32; // Displays your 16x16 sprite at 2x scale
-    
-      const px = Math.floor(screenX - size / 2);
-      const py = Math.floor(screenY - size + 4);
-    
-      let sprite;
+      const size = PLAYER_SPRITE_SIZE;
 
-      const isWalking =
-        keys.has("KeyW") ||
-        keys.has("KeyA") ||
-        keys.has("KeyS") ||
-        keys.has("KeyD") ||
-        keys.has("ArrowUp") ||
-        keys.has("ArrowDown") ||
-        keys.has("ArrowLeft") ||
-        keys.has("ArrowRight");
+      const px = Math.floor(
+        screenX - size / 2
+      );
 
-      if (!isWalking) {
-        if (player.facing === "down") {
-          sprite = maleIdleDown;
-        } else if (player.facing === "up") {
-          sprite = maleIdleUp;
-        } else if (player.facing === "left") {
-          sprite = maleFacingLeft;
-        } else if (player.facing === "right") {
-          sprite = maleFacingRight;
-        }
-      } else {
-        if (player.facing === "down") {
-          sprite = maleFacingDown;
-        } else if (player.facing === "up") {
-          sprite = maleFacingUp;
-        } else if (player.facing === "left") {
-          sprite = maleFacingLeft;
-        } else if (player.facing === "right") {
-          sprite = maleFacingRight;
-        }
-      }
+      const py = Math.floor(
+        screenY - size + 4
+      );
 
-      
-    
-      if (player.facing === "down") {
-        sprite = maleFacingDown;
-      } else if (player.facing === "up") {
-        sprite = maleFacingUp;
-      } else if (player.facing === "left") {
-        sprite = maleFacingLeft;
-      } else if (player.facing === "right") {
-        sprite = maleFacingRight;
-      }
-    
-      if (sprite && sprite.complete && sprite.naturalWidth > 0) {
-        ctx.drawImage(sprite, px, py, size, size);
+      const sprite = getPlayerSprite();
+
+      if (
+        sprite &&
+        sprite.complete &&
+        sprite.naturalWidth > 0
+      ) {
+        ctx.drawImage(
+          sprite,
+          px,
+          py,
+          size,
+          size
+        );
       }
     }
 
@@ -371,19 +535,33 @@
     // ============================================================
     function update(dt) {
       let dx =
-        Number(keys.has("KeyD") || keys.has("ArrowRight")) -
-        Number(keys.has("KeyA") || keys.has("ArrowLeft"));
+        Number(
+          keys.has("KeyD") ||
+          keys.has("ArrowRight")
+        ) -
+        Number(
+          keys.has("KeyA") ||
+          keys.has("ArrowLeft")
+        );
 
       let dy =
-        Number(keys.has("KeyS") || keys.has("ArrowDown")) -
-        Number(keys.has("KeyW") || keys.has("ArrowUp"));
+        Number(
+          keys.has("KeyS") ||
+          keys.has("ArrowDown")
+        ) -
+        Number(
+          keys.has("KeyW") ||
+          keys.has("ArrowUp")
+        );
 
-      if (dx === 0 && dy === 0) return;
+      // Player isn't pressing movement keys.
+      if (dx === 0 && dy === 0) {
+        player.moving = false;
+        player.walkDistance = 0;
+        player.walkFrame = 0;
+        return;
+      }
 
-
-      const halfwayX = (((player.x % TILE_SIZE) + TILE_SIZE) % TILE_SIZE) >= TILE_SIZE / 2;
-      const halfwayY = (((player.y % TILE_SIZE) + TILE_SIZE) % TILE_SIZE) >= TILE_SIZE / 2;
-      
       const length = Math.hypot(dx, dy);
 
       dx /= length;
@@ -396,6 +574,10 @@
       const moveX = dx * speed * dt;
       const moveY = dy * speed * dt;
 
+      // Remember position to detect actual movement.
+      const previousX = player.x;
+      const previousY = player.y;
+
       // Horizontal and vertical collision separately.
       if (canMoveTo(player.x + moveX, player.y)) {
         player.x += moveX;
@@ -405,38 +587,43 @@
         player.y += moveY;
       }
 
+      // ============================================================
+      // FACING DIRECTION
+      // ============================================================
       if (Math.abs(dx) > Math.abs(dy)) {
         player.facing = dx > 0 ? "right" : "left";
       } else {
         player.facing = dy > 0 ? "down" : "up";
       }
 
-      if (keys.has("KeyA") || keys.has("ArrowLeft")) {
-        if (halfwayX === true) {
-          maleFacingLeft.src = "characters/male/male-walking-left-2.png";
-        } else {
-          maleFacingLeft.src = "characters/male/male-walking-left-1.png";
-        }
-      }
-      
-      if (keys.has("KeyW") || keys.has("ArrowUp")) {
-        if (halfwayY === true) {
-          maleFacingUp.src = "characters/male/male-backward-walking-1.png";
-        } else {
-          maleFacingUp.src = "characters/male/male-backward-walking-2.png";
-        }
-      }
-      if (keys.has("KeyS") || keys.has("ArrowDown")) {
-        if (halfwayY === true) {
-          maleFacingDown.src = "characters/male/male-forward-walking-1.png";
-        } else {
-          maleFacingDown.src = "characters/male/male-forward-walking-2.png";
-        }
-      }
+      // ============================================================
+      // WALKING ANIMATION
+      // ============================================================
 
+      // Calculate how far player actually moved.
+      const traveledX = player.x - previousX;
+      const traveledY = player.y - previousY;
 
+      const distanceMoved = Math.hypot(
+        traveledX,
+        traveledY
+      );
 
-      
+      player.moving = distanceMoved > 0.0001;
+
+      if (player.moving) {
+        // Add actual distance traveled.
+        player.walkDistance += distanceMoved;
+
+        // Every half tile, change animation frame.
+        player.walkFrame = Math.floor(
+          player.walkDistance / WALK_FRAME_DISTANCE
+        ) % 2;
+      } else {
+        // Player stopped or hit an obstacle.
+        player.walkDistance = 0;
+        player.walkFrame = 0;
+      }
     }
 
     // ============================================================
@@ -451,10 +638,10 @@
         player.y - canvas.height / 2
       );
 
-      // 1. Ground
+      // 1. Grass
       drawGround(cameraX, cameraY);
 
-      // 2. Plot floors and pedestals behind the player
+      // 2. Plot floors and pedestals behind player
       drawPlots(cameraX, cameraY, false);
 
       // 3. Player
@@ -463,7 +650,7 @@
         player.y - cameraY
       );
 
-      // 4. Pedestals in front of the player
+      // 4. Pedestals in front of player
       drawPlots(cameraX, cameraY, true);
     }
 
@@ -473,7 +660,11 @@
     let lastTime = performance.now();
 
     function gameLoop(now) {
-      const dt = Math.min((now - lastTime) / 1000, 0.05);
+      const dt = Math.min(
+        (now - lastTime) / 1000,
+        0.05
+      );
+
       lastTime = now;
 
       update(dt);
@@ -489,8 +680,13 @@
     // ============================================================
     window.addEventListener("keydown", (event) => {
       if (
-        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"]
-          .includes(event.code)
+        [
+          "ArrowUp",
+          "ArrowDown",
+          "ArrowLeft",
+          "ArrowRight",
+          "Space"
+        ].includes(event.code)
       ) {
         event.preventDefault();
       }
@@ -504,6 +700,9 @@
 
     window.addEventListener("blur", () => {
       keys.clear();
+      player.moving = false;
+      player.walkDistance = 0;
+      player.walkFrame = 0;
     });
 
   </script>
