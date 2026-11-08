@@ -328,10 +328,16 @@
         keys.has("ArrowRight");
 
       if (!isWalking) {
-        // Player is standing still
-        sprite = maleIdle;
+        if (player.facing === "down") {
+          sprite = maleIdleDown;
+        } else if (player.facing === "up") {
+          sprite = maleIdleUp;
+        } else if (player.facing === "left") {
+          sprite = maleFacingLeft;
+        } else if (player.facing === "right") {
+          sprite = maleFacingRight;
+        }
       } else {
-        // Player is walking
         if (player.facing === "down") {
           sprite = maleFacingDown;
         } else if (player.facing === "up") {
