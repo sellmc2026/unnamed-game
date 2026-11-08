@@ -1,11 +1,15 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pixel Pet Game</title>
+
   <style>
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     html, body {
       width: 100%;
@@ -20,41 +24,77 @@
       width: 100vw;
       height: 100vh;
       image-rendering: pixelated;
-      image-rendering: crisp-edges;
     }
-
-    
   </style>
 </head>
+
 <body>
   <canvas id="game"></canvas>
 
   <script>
     "use strict";
 
-    
-
     // ============================================================
     // SETTINGS
     // ============================================================
-    const TILE_SIZE = 24;
-    const PIXEL_SCALE = 3;  // Larger number = chunkier pixels.
-    let PLAYER_SPEED = 80; // Normal walking speed
+    const TILE_SIZE = 32;
+    const PIXEL_SCALE = 3;
 
-    window.addEventListener("keydown", (event) => {
-        if (event.code === "ShiftLeft") {
-            PLAYER_SPEED = 115;
-        }
-    });
-    
-    window.addEventListener("keyup", (event) => {
-        if (event.code === "ShiftLeft") {
-            PLAYER_SPEED = 80;
-        }
-    });
+    const WALK_SPEED = 80;
+    const SPRINT_SPEED = 115;
 
+    let PLAYER_SPEED = WALK_SPEED;
+
+    // ============================================================
+    // PLOT SETTINGS
+    // ============================================================
+    const PLOT_COLUMNS = 5;
+    const PLOT_ROWS = 5;
+
+    // Empty tiles between pedestals
+    const PEDESTAL_GAP = 1;
+
+    // Empty tiles around the inside of each plot
+    const PLOT_PADDING = 1;
+
+    // Grass tiles between different plots
+    const PLOT_GAP = 9;
+
+    const PLOT_COLOR = "#d3d3d3";
+
+    const PLOT_TILES =
+      PLOT_COLUMNS +
+      (PLOT_COLUMNS - 1) * PEDESTAL_GAP +
+      PLOT_PADDING * 2;
+
+    const PLOT_SIZE = PLOT_TILES * TILE_SIZE;
+
+    const PLOT_SPACING =
+      PLOT_SIZE + PLOT_GAP * TILE_SIZE;
+
+    const PLOT_ORIGIN = -PLOT_SIZE / 2;
+
+    // ============================================================
+    // TEXTURES
+    // ============================================================
+    const pedestalTexture = new Image();
+
+    pedestalTexture.src =
+      "textures/solid/pedestal-vacant.png";
+
+    pedestalTexture.onerror = () => {
+      console.error("Failed to load pedestal texture!");
+    };
+
+    // ============================================================
+    // CANVAS
+    // ============================================================
     const canvas = document.getElementById("game");
-    const ctx = canvas.getContext("2d", { alpha: false });
+
+    const ctx = canvas.getContext("2d", {
+      alpha: false
+    });
+
     ctx.imageSmoothingEnabled = false;
 
     // ============================================================
@@ -65,32 +105,46 @@
       y: 0,
       facing: "down"
     };
+
     const keys = new Set();
 
     // ============================================================
     // SCREEN / CAMERA
-    // The camera follows the player. The world has no borders.
     // ============================================================
     function resize() {
-      canvas.width = Math.ceil(window.innerWidth / PIXEL_SCALE);
-      canvas.height = Math.ceil(window.innerHeight / PIXEL_SCALE);
+      canvas.width = Math.ceil(
+        window.innerWidth / PIXEL_SCALE
+      );
+
+      canvas.height = Math.ceil(
+        window.innerHeight / PIXEL_SCALE
+      );
+
       ctx.imageSmoothingEnabled = false;
     }
+
     window.addEventListener("resize", resize);
     resize();
 
     // ============================================================
-    // INFINITE GRASS
-    // Grass is generated from coordinates, so the same location
-    // always looks the same even after walking far away.
-    // No tiles need to be stored in memory.
+    // TERRAIN HASH
     // ============================================================
     function hash(x, y) {
-      let h = Math.imul(x, 374761393) + Math.imul(y, 668265263);
-      h = Math.imul(h ^ (h >>> 13), 1274126177);
+      let h =
+        Math.imul(x, 374761393) +
+        Math.imul(y, 668265263);
+
+      h = Math.imul(
+        h ^ (h >>> 13),
+        1274126177
+      );
+
       return (h ^ (h >>> 16)) >>> 0;
     }
 
+    // ============================================================
+    // INFINITE GRASS
+    // ============================================================
     function drawGround(cameraX, cameraY) {
       const left = Math.floor(cameraX / TILE_SIZE);
       const top = Math.floor(cameraY / TILE_SIZE);
@@ -120,8 +174,89 @@
     }
 
     // ============================================================
-    // PLAYER PLACEHOLDER
-    // Replace drawPlayer() with your own sprite later.
+    // INFINITE PLOTS
+    // ============================================================
+    function drawPlots(cameraX, cameraY) {
+
+      // Only draw plots visible on the screen
+      const startX = Math.floor(
+        (cameraX - PLOT_ORIGIN - PLOT_SIZE) / PLOT_SPACING
+      );
+
+      const endX = Math.floor(
+        (cameraX + canvas.width - PLOT_ORIGIN) / PLOT_SPACING
+      );
+
+      const startY = Math.floor(
+        (cameraY - PLOT_ORIGIN - PLOT_SIZE) / PLOT_SPACING
+      );
+
+      const endY = Math.floor(
+        (cameraY + canvas.height - PLOT_ORIGIN) / PLOT_SPACING
+      );
+
+      for (let plotY = startY; plotY <= endY; plotY++) {
+        for (let plotX = startX; plotX <= endX; plotX++) {
+
+          // Position of this plot on screen
+          const x = Math.floor(
+            PLOT_ORIGIN +
+            plotX * PLOT_SPACING -
+            cameraX
+          );
+
+          const y = Math.floor(
+            PLOT_ORIGIN +
+            plotY * PLOT_SPACING -
+            cameraY
+          );
+
+          // Draw plot background
+          ctx.fillStyle = PLOT_COLOR;
+
+          ctx.fillRect(
+            x,
+            y,
+            PLOT_SIZE,
+            PLOT_SIZE
+          );
+
+          // ======================================================
+          // PEDESTALS (5x5)
+          // ======================================================
+          for (let row = 0; row < PLOT_ROWS; row++) {
+            for (let col = 0; col < PLOT_COLUMNS; col++) {
+
+              const pedestalX = x + (
+                PLOT_PADDING +
+                col * (1 + PEDESTAL_GAP)
+              ) * TILE_SIZE;
+
+              const pedestalY = y + (
+                PLOT_PADDING +
+                row * (1 + PEDESTAL_GAP)
+              ) * TILE_SIZE;
+
+              if (
+                pedestalTexture.complete &&
+                pedestalTexture.naturalWidth > 0
+              ) {
+                ctx.drawImage(
+                  pedestalTexture,
+                  pedestalX,
+                  pedestalY,
+                  TILE_SIZE,
+                  TILE_SIZE
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // ============================================================
+    // PLAYER
     // ============================================================
     function drawPlayer(screenX, screenY) {
       const px = Math.floor(screenX - 12);
@@ -132,13 +267,13 @@
         ctx.fillRect(px + x, py + y, w, h);
       }
 
-      rect(3, 20, 18, 3, "#4e7950");  // Shadow
-      rect(5, 3, 14, 10, "#352b3b");  // Hair
-      rect(6, 7, 12, 9, "#edbb92");   // Face
-      rect(7, 4, 10, 4, "#352b3b");   // Hair fringe
-      rect(5, 16, 14, 6, "#557cb4");  // Shirt
-      rect(5, 22, 5, 2, "#333d51");   // Left foot
-      rect(14, 22, 5, 2, "#333d51");  // Right foot
+      rect(3, 20, 18, 3, "#4e7950");
+      rect(5, 3, 14, 10, "#352b3b");
+      rect(6, 7, 12, 9, "#edbb92");
+      rect(7, 4, 10, 4, "#352b3b");
+      rect(5, 16, 14, 6, "#557cb4");
+      rect(5, 22, 5, 2, "#333d51");
+      rect(14, 22, 5, 2, "#333d51");
 
       if (player.facing === "down") {
         rect(9, 10, 2, 2, "#352b3b");
@@ -150,14 +285,18 @@
     // UPDATE
     // ============================================================
     function update(dt) {
-      let dx = Number(keys.has("d") || keys.has("arrowright"))
-             - Number(keys.has("a") || keys.has("arrowleft"));
 
-      let dy = Number(keys.has("s") || keys.has("arrowdown"))
-             - Number(keys.has("w") || keys.has("arrowup"));
+      let dx =
+        Number(keys.has("d") || keys.has("arrowright")) -
+        Number(keys.has("a") || keys.has("arrowleft"));
+
+      let dy =
+        Number(keys.has("s") || keys.has("arrowdown")) -
+        Number(keys.has("w") || keys.has("arrowup"));
 
       if (dx || dy) {
         const length = Math.hypot(dx, dy);
+
         dx /= length;
         dy /= length;
 
@@ -170,25 +309,44 @@
           player.facing = dy > 0 ? "down" : "up";
         }
       }
-
-      // Add future game mechanics here.
     }
 
     // ============================================================
-    // DRAW / GAME LOOP
+    // DRAW
     // ============================================================
     function draw() {
-      const cameraX = Math.round(player.x - canvas.width / 2);
-      const cameraY = Math.round(player.y - canvas.height / 2);
+      const cameraX = Math.round(
+        player.x - canvas.width / 2
+      );
 
+      const cameraY = Math.round(
+        player.y - canvas.height / 2
+      );
+
+      // Grass
       drawGround(cameraX, cameraY);
-      drawPlayer(player.x - cameraX, player.y - cameraY);
+
+      // Plots and pedestals
+      drawPlots(cameraX, cameraY);
+
+      // Player
+      drawPlayer(
+        player.x - cameraX,
+        player.y - cameraY
+      );
     }
 
+    // ============================================================
+    // GAME LOOP
+    // ============================================================
     let lastTime = performance.now();
 
     function gameLoop(now) {
-      const dt = Math.min((now - lastTime) / 1000, 0.05);
+      const dt = Math.min(
+        (now - lastTime) / 1000,
+        0.05
+      );
+
       lastTime = now;
 
       update(dt);
@@ -205,19 +363,34 @@
     window.addEventListener("keydown", (event) => {
       const key = event.key.toLowerCase();
 
-      if (["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(key)) {
+      if (
+        ["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(key)
+      ) {
         event.preventDefault();
       }
 
       keys.add(key);
+
+      if (event.code === "ShiftLeft") {
+        PLAYER_SPEED = SPRINT_SPEED;
+      }
     });
 
     window.addEventListener("keyup", (event) => {
       keys.delete(event.key.toLowerCase());
+
+      if (event.code === "ShiftLeft") {
+        PLAYER_SPEED = WALK_SPEED;
+      }
     });
 
-    window.addEventListener("blur", () => keys.clear());
+    window.addEventListener("blur", () => {
+      keys.clear();
+      PLAYER_SPEED = WALK_SPEED;
+    });
+
   </script>
 </body>
 </html>
+
 
