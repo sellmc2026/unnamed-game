@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -34,30 +33,40 @@
     // ============================================================
     // SETTINGS
     // ============================================================
-    const PEDESTAL_SCALE = 1.5;      // 1.5x larger
-    const PEDESTAL_HITBOX_HEIGHT = 6; // Bottom 6 pixels are solid
-    
     const TILE_SIZE = 16;
     const PIXEL_SCALE = 3;
+
     const WALK_SPEED = 80;
     const SPRINT_SPEED = 115;
 
     const PLOT_COLUMNS = 5;
     const PLOT_ROWS = 5;
-    const PEDESTAL_GAP = 1;  // Empty tiles between pedestals
-    const PLOT_PADDING = 1;  // Empty tiles inside each plot's edges
-    const PLOT_GAP = 5;      // Grass tiles between plots
+    const PEDESTAL_GAP = 1;
+    const PLOT_PADDING = 1;
+    const PLOT_GAP = 9;
     const PLOT_COLOR = "#d3d3d3";
 
-    const PEDESTAL_STEP = PEDESTAL_GAP + 1.5;
+    // Pedestal appearance and collision
+    const PEDESTAL_SCALE = 1.5;
+    const PEDESTAL_HITBOX_HEIGHT = 6;
+
+    const PEDESTAL_STEP = PEDESTAL_GAP + 1;
+
     const PLOT_WIDTH = (
-      PLOT_COLUMNS + (PLOT_COLUMNS - 1) * PEDESTAL_GAP + 2 * PLOT_PADDING
+      PLOT_COLUMNS +
+      (PLOT_COLUMNS - 1) * PEDESTAL_GAP +
+      PLOT_PADDING * 2
     ) * TILE_SIZE;
+
     const PLOT_HEIGHT = (
-      PLOT_ROWS + (PLOT_ROWS - 1) * PEDESTAL_GAP + 2 * PLOT_PADDING
+      PLOT_ROWS +
+      (PLOT_ROWS - 1) * PEDESTAL_GAP +
+      PLOT_PADDING * 2
     ) * TILE_SIZE;
+
     const PLOT_STEP_X = PLOT_WIDTH + PLOT_GAP * TILE_SIZE;
     const PLOT_STEP_Y = PLOT_HEIGHT + PLOT_GAP * TILE_SIZE;
+
     const PLOT_ORIGIN_X = -PLOT_WIDTH / 2;
     const PLOT_ORIGIN_Y = -PLOT_HEIGHT / 2;
 
@@ -69,16 +78,19 @@
     const keys = new Set();
 
     const player = {
-      x: -16, // Start on a walkway, not inside a pedestal
+      x: -16,
       y: -16,
       width: 12,
-      height: 6, // Collision box around the player's feet
+      height: 6,
       facing: "down"
     };
 
     const pedestalTexture = new Image();
     pedestalTexture.src = "textures/solid/pedestal-vacant.png";
-    pedestalTexture.onerror = () => console.error("Could not load pedestal-vacant.png");
+
+    pedestalTexture.onerror = () => {
+      console.error("Could not load pedestal-vacant.png");
+    };
 
     function resize() {
       canvas.width = Math.ceil(window.innerWidth / PIXEL_SCALE);
@@ -117,6 +129,7 @@
             ctx.fillStyle = "#98ba7b";
             ctx.fillRect(px + 6, py + 9, 2, 3);
           }
+
           if (n % 23 === 0) {
             ctx.fillStyle = "#648e5e";
             ctx.fillRect(px + 17, py + 15, 2, 2);
@@ -128,37 +141,81 @@
     // ============================================================
     // PLOTS AND PEDESTALS
     // ============================================================
-    function drawPlots(cameraX, cameraY) {
-      // Only draw plots that might be visible on the screen.
-      const firstX = Math.floor((cameraX - PLOT_ORIGIN_X - PLOT_WIDTH) / PLOT_STEP_X);
-      const lastX = Math.floor((cameraX + canvas.width - PLOT_ORIGIN_X) / PLOT_STEP_X);
-      const firstY = Math.floor((cameraY - PLOT_ORIGIN_Y - PLOT_HEIGHT) / PLOT_STEP_Y);
-      const lastY = Math.floor((cameraY + canvas.height - PLOT_ORIGIN_Y) / PLOT_STEP_Y);
+    function drawPlots(cameraX, cameraY, foreground = false) {
+      const firstX = Math.floor(
+        (cameraX - PLOT_ORIGIN_X - PLOT_WIDTH) / PLOT_STEP_X
+      );
 
-      const textureReady = pedestalTexture.complete && pedestalTexture.naturalWidth > 0;
+      const lastX = Math.floor(
+        (cameraX + canvas.width - PLOT_ORIGIN_X) / PLOT_STEP_X
+      );
+
+      const firstY = Math.floor(
+        (cameraY - PLOT_ORIGIN_Y - PLOT_HEIGHT) / PLOT_STEP_Y
+      );
+
+      const lastY = Math.floor(
+        (cameraY + canvas.height - PLOT_ORIGIN_Y) / PLOT_STEP_Y
+      );
+
+      const textureReady =
+        pedestalTexture.complete &&
+        pedestalTexture.naturalWidth > 0;
+
+      const pedestalSize = Math.round(
+        TILE_SIZE * PEDESTAL_SCALE
+      );
 
       for (let plotY = firstY; plotY <= lastY; plotY++) {
         for (let plotX = firstX; plotX <= lastX; plotX++) {
-          const x = Math.floor(PLOT_ORIGIN_X + plotX * PLOT_STEP_X - cameraX);
-          const y = Math.floor(PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y - cameraY);
+          const worldX = PLOT_ORIGIN_X + plotX * PLOT_STEP_X;
+          const worldY = PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y;
 
-          ctx.fillStyle = PLOT_COLOR;
-          ctx.fillRect(x, y, PLOT_WIDTH, PLOT_HEIGHT);
+          const x = Math.floor(worldX - cameraX);
+          const y = Math.floor(worldY - cameraY);
+
+          // Draw plot floors only on the background pass.
+          if (!foreground) {
+            ctx.fillStyle = PLOT_COLOR;
+            ctx.fillRect(x, y, PLOT_WIDTH, PLOT_HEIGHT);
+          }
 
           if (!textureReady) continue;
 
           for (let row = 0; row < PLOT_ROWS; row++) {
             for (let col = 0; col < PLOT_COLUMNS; col++) {
-              const px = x + (PLOT_PADDING + col * PEDESTAL_STEP) * TILE_SIZE;
-              const py = y + (PLOT_PADDING + row * PEDESTAL_STEP) * TILE_SIZE;
-              const size = Math.round(TILE_SIZE * PEDESTAL_SCALE);
+              const tileX = (
+                PLOT_PADDING + col * PEDESTAL_STEP
+              ) * TILE_SIZE;
+
+              const tileY = (
+                PLOT_PADDING + row * PEDESTAL_STEP
+              ) * TILE_SIZE;
+
+              // Bottom of the pedestal's ground tile.
+              const pedestalFeetY = worldY + tileY + TILE_SIZE;
+
+              // Lower objects render over higher objects.
+              const inFrontOfPlayer = pedestalFeetY > player.y;
+
+              if (inFrontOfPlayer !== foreground) continue;
+
+              // Enlarge while keeping the pedestal centered
+              // and its bottom anchored to its original tile.
+              const px = Math.round(
+                x + tileX - (pedestalSize - TILE_SIZE) / 2
+              );
+
+              const py = Math.round(
+                y + tileY + TILE_SIZE - pedestalSize
+              );
 
               ctx.drawImage(
-                  pedestalTexture,
-                  px - (size - TILE_SIZE) / 2,
-                  py + TILE_SIZE - size,
-                  size,
-                  size
+                pedestalTexture,
+                px,
+                py,
+                pedestalSize,
+                pedestalSize
               );
             }
           }
@@ -169,35 +226,45 @@
     // ============================================================
     // PEDESTAL COLLISION
     // ============================================================
-    
     function isPositionSolid(worldX, worldY) {
-        const plotX = Math.floor((worldX - PLOT_ORIGIN_X) / PLOT_STEP_X);
-        const plotY = Math.floor((worldY - PLOT_ORIGIN_Y) / PLOT_STEP_Y);
-    
-        const localX = worldX - (PLOT_ORIGIN_X + plotX * PLOT_STEP_X);
-        const localY = worldY - (PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y);
-    
-        if (localX >= PLOT_WIDTH || localY >= PLOT_HEIGHT) {
-            return false;
-        }
-    
-        const colTile = Math.floor(localX / TILE_SIZE) - PLOT_PADDING;
-        const rowTile = Math.floor(localY / TILE_SIZE) - PLOT_PADDING;
-    
-        const isPedestal =
-            colTile >= 0 &&
-            colTile < PLOT_COLUMNS * PEDESTAL_STEP &&
-            rowTile >= 0 &&
-            rowTile < PLOT_ROWS * PEDESTAL_STEP &&
-            colTile % PEDESTAL_STEP === 0 &&
-            rowTile % PEDESTAL_STEP === 0;
-    
-        if (!isPedestal) return false;
-    
-        // Only the bottom portion of the pedestal is solid.
-        const pixelY = localY % TILE_SIZE;
-    
-        return pixelY >= TILE_SIZE - PEDESTAL_HITBOX_HEIGHT;
+      const plotX = Math.floor(
+        (worldX - PLOT_ORIGIN_X) / PLOT_STEP_X
+      );
+
+      const plotY = Math.floor(
+        (worldY - PLOT_ORIGIN_Y) / PLOT_STEP_Y
+      );
+
+      const localX = worldX - (
+        PLOT_ORIGIN_X + plotX * PLOT_STEP_X
+      );
+
+      const localY = worldY - (
+        PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y
+      );
+
+      // Grass outside plots has no collision.
+      if (localX >= PLOT_WIDTH || localY >= PLOT_HEIGHT) {
+        return false;
+      }
+
+      const colTile = Math.floor(localX / TILE_SIZE) - PLOT_PADDING;
+      const rowTile = Math.floor(localY / TILE_SIZE) - PLOT_PADDING;
+
+      const isPedestal =
+        colTile >= 0 &&
+        colTile < PLOT_COLUMNS * PEDESTAL_STEP &&
+        rowTile >= 0 &&
+        rowTile < PLOT_ROWS * PEDESTAL_STEP &&
+        colTile % PEDESTAL_STEP === 0 &&
+        rowTile % PEDESTAL_STEP === 0;
+
+      if (!isPedestal) return false;
+
+      // Only the bottom portion of the tile is solid.
+      const pixelY = localY % TILE_SIZE;
+
+      return pixelY >= TILE_SIZE - PEDESTAL_HITBOX_HEIGHT;
     }
 
     function canMoveTo(x, y) {
@@ -216,7 +283,6 @@
     // PLAYER
     // ============================================================
     function drawPlayer(screenX, screenY) {
-      // screenX/screenY mark the center of the player's feet.
       const px = Math.floor(screenX - 12);
       const py = Math.floor(screenY - 23);
 
@@ -225,12 +291,12 @@
         ctx.fillRect(px + x, py + y, w, h);
       }
 
-      rect(3, 20, 18, 3, "#4e7950"); // Shadow
-      rect(5, 3, 14, 10, "#352b3b"); // Hair
-      rect(6, 7, 12, 9, "#edbb92"); // Face
-      rect(7, 4, 10, 4, "#352b3b"); // Fringe
-      rect(5, 16, 14, 6, "#557cb4"); // Shirt
-      rect(5, 22, 5, 2, "#333d51"); // Feet
+      rect(3, 20, 18, 3, "#4e7950");
+      rect(5, 3, 14, 10, "#352b3b");
+      rect(6, 7, 12, 9, "#edbb92");
+      rect(7, 4, 10, 4, "#352b3b");
+      rect(5, 16, 14, 6, "#557cb4");
+      rect(5, 22, 5, 2, "#333d51");
       rect(14, 22, 5, 2, "#333d51");
 
       if (player.facing === "down") {
@@ -240,27 +306,39 @@
     }
 
     // ============================================================
-    // UPDATE / RENDER
+    // UPDATE
     // ============================================================
     function update(dt) {
-      let dx = Number(keys.has("KeyD") || keys.has("ArrowRight")) -
-               Number(keys.has("KeyA") || keys.has("ArrowLeft"));
-      let dy = Number(keys.has("KeyS") || keys.has("ArrowDown")) -
-               Number(keys.has("KeyW") || keys.has("ArrowUp"));
+      let dx =
+        Number(keys.has("KeyD") || keys.has("ArrowRight")) -
+        Number(keys.has("KeyA") || keys.has("ArrowLeft"));
+
+      let dy =
+        Number(keys.has("KeyS") || keys.has("ArrowDown")) -
+        Number(keys.has("KeyW") || keys.has("ArrowUp"));
 
       if (dx === 0 && dy === 0) return;
 
       const length = Math.hypot(dx, dy);
+
       dx /= length;
       dy /= length;
 
-      const speed = keys.has("ShiftLeft") ? SPRINT_SPEED : WALK_SPEED;
+      const speed = keys.has("ShiftLeft")
+        ? SPRINT_SPEED
+        : WALK_SPEED;
+
       const moveX = dx * speed * dt;
       const moveY = dy * speed * dt;
 
-      // Check each axis separately so the player can slide along pedestals.
-      if (canMoveTo(player.x + moveX, player.y)) player.x += moveX;
-      if (canMoveTo(player.x, player.y + moveY)) player.y += moveY;
+      // Horizontal and vertical collision separately.
+      if (canMoveTo(player.x + moveX, player.y)) {
+        player.x += moveX;
+      }
+
+      if (canMoveTo(player.x, player.y + moveY)) {
+        player.y += moveY;
+      }
 
       if (Math.abs(dx) > Math.abs(dy)) {
         player.facing = dx > 0 ? "right" : "left";
@@ -269,39 +347,73 @@
       }
     }
 
+    // ============================================================
+    // DRAW
+    // ============================================================
     function draw() {
-      const cameraX = Math.round(player.x - canvas.width / 2);
-      const cameraY = Math.round(player.y - canvas.height / 2);
+      const cameraX = Math.round(
+        player.x - canvas.width / 2
+      );
 
+      const cameraY = Math.round(
+        player.y - canvas.height / 2
+      );
+
+      // 1. Ground
       drawGround(cameraX, cameraY);
-      drawPlots(cameraX, cameraY);
-      drawPlayer(player.x - cameraX, player.y - cameraY);
+
+      // 2. Plot floors and pedestals behind the player
+      drawPlots(cameraX, cameraY, false);
+
+      // 3. Player
+      drawPlayer(
+        player.x - cameraX,
+        player.y - cameraY
+      );
+
+      // 4. Pedestals in front of the player
+      drawPlots(cameraX, cameraY, true);
     }
 
+    // ============================================================
+    // GAME LOOP
+    // ============================================================
     let lastTime = performance.now();
 
     function gameLoop(now) {
       const dt = Math.min((now - lastTime) / 1000, 0.05);
       lastTime = now;
+
       update(dt);
       draw();
+
       requestAnimationFrame(gameLoop);
     }
 
     requestAnimationFrame(gameLoop);
 
     // ============================================================
-    // INPUT
+    // CONTROLS
     // ============================================================
     window.addEventListener("keydown", (event) => {
-      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(event.code)) {
+      if (
+        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"]
+          .includes(event.code)
+      ) {
         event.preventDefault();
       }
+
       keys.add(event.code);
     });
 
-    window.addEventListener("keyup", (event) => keys.delete(event.code));
-    window.addEventListener("blur", () => keys.clear());
+    window.addEventListener("keyup", (event) => {
+      keys.delete(event.code);
+    });
+
+    window.addEventListener("blur", () => {
+      keys.clear();
+    });
+
   </script>
 </body>
 </html>
