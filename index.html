@@ -34,6 +34,9 @@
     // ============================================================
     // SETTINGS
     // ============================================================
+    const PEDESTAL_SCALE = 1.5;      // 1.5x larger
+    const PEDESTAL_HITBOX_HEIGHT = 6; // Bottom 6 pixels are solid
+    
     const TILE_SIZE = 16;
     const PIXEL_SCALE = 3;
     const WALK_SPEED = 80;
@@ -43,10 +46,10 @@
     const PLOT_ROWS = 5;
     const PEDESTAL_GAP = 1;  // Empty tiles between pedestals
     const PLOT_PADDING = 1;  // Empty tiles inside each plot's edges
-    const PLOT_GAP = 9;      // Grass tiles between plots
+    const PLOT_GAP = 5;      // Grass tiles between plots
     const PLOT_COLOR = "#d3d3d3";
 
-    const PEDESTAL_STEP = PEDESTAL_GAP + 1;
+    const PEDESTAL_STEP = PEDESTAL_GAP + 1.5;
     const PLOT_WIDTH = (
       PLOT_COLUMNS + (PLOT_COLUMNS - 1) * PEDESTAL_GAP + 2 * PLOT_PADDING
     ) * TILE_SIZE;
@@ -148,7 +151,15 @@
             for (let col = 0; col < PLOT_COLUMNS; col++) {
               const px = x + (PLOT_PADDING + col * PEDESTAL_STEP) * TILE_SIZE;
               const py = y + (PLOT_PADDING + row * PEDESTAL_STEP) * TILE_SIZE;
-              ctx.drawImage(pedestalTexture, px, py, TILE_SIZE, TILE_SIZE);
+              const size = Math.round(TILE_SIZE * PEDESTAL_SCALE);
+
+              ctx.drawImage(
+                  pedestalTexture,
+                  px - (size - TILE_SIZE) / 2,
+                  py + TILE_SIZE - size,
+                  size,
+                  size
+              );
             }
           }
         }
@@ -158,24 +169,35 @@
     // ============================================================
     // PEDESTAL COLLISION
     // ============================================================
+    
     function isPositionSolid(worldX, worldY) {
-      const plotX = Math.floor((worldX - PLOT_ORIGIN_X) / PLOT_STEP_X);
-      const plotY = Math.floor((worldY - PLOT_ORIGIN_Y) / PLOT_STEP_Y);
-      const localX = worldX - (PLOT_ORIGIN_X + plotX * PLOT_STEP_X);
-      const localY = worldY - (PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y);
-
-      // Grass between plots isn't solid.
-      if (localX >= PLOT_WIDTH || localY >= PLOT_HEIGHT) return false;
-
-      const colTile = Math.floor(localX / TILE_SIZE) - PLOT_PADDING;
-      const rowTile = Math.floor(localY / TILE_SIZE) - PLOT_PADDING;
-
-      return (
-        colTile >= 0 && colTile < PLOT_COLUMNS * PEDESTAL_STEP &&
-        rowTile >= 0 && rowTile < PLOT_ROWS * PEDESTAL_STEP &&
-        colTile % PEDESTAL_STEP === 0 &&
-        rowTile % PEDESTAL_STEP === 0
-      );
+        const plotX = Math.floor((worldX - PLOT_ORIGIN_X) / PLOT_STEP_X);
+        const plotY = Math.floor((worldY - PLOT_ORIGIN_Y) / PLOT_STEP_Y);
+    
+        const localX = worldX - (PLOT_ORIGIN_X + plotX * PLOT_STEP_X);
+        const localY = worldY - (PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y);
+    
+        if (localX >= PLOT_WIDTH || localY >= PLOT_HEIGHT) {
+            return false;
+        }
+    
+        const colTile = Math.floor(localX / TILE_SIZE) - PLOT_PADDING;
+        const rowTile = Math.floor(localY / TILE_SIZE) - PLOT_PADDING;
+    
+        const isPedestal =
+            colTile >= 0 &&
+            colTile < PLOT_COLUMNS * PEDESTAL_STEP &&
+            rowTile >= 0 &&
+            rowTile < PLOT_ROWS * PEDESTAL_STEP &&
+            colTile % PEDESTAL_STEP === 0 &&
+            rowTile % PEDESTAL_STEP === 0;
+    
+        if (!isPedestal) return false;
+    
+        // Only the bottom portion of the pedestal is solid.
+        const pixelY = localY % TILE_SIZE;
+    
+        return pixelY >= TILE_SIZE - PEDESTAL_HITBOX_HEIGHT;
     }
 
     function canMoveTo(x, y) {
@@ -283,61 +305,3 @@
   </script>
 </body>
 </html>
-==============================
-    // GAME LOOP
-    // ============================================================
-    let lastTime = performance.now();
-
-    function gameLoop(now) {
-      const dt = Math.min(
-        (now - lastTime) / 1000,
-        0.05
-      );
-
-      lastTime = now;
-
-      update(dt);
-      draw();
-
-      requestAnimationFrame(gameLoop);
-    }
-
-    requestAnimationFrame(gameLoop);
-
-    // ============================================================
-    // CONTROLS
-    // ============================================================
-    window.addEventListener("keydown", (event) => {
-      const key = event.key.toLowerCase();
-
-      if (
-        ["arrowup", "arrowdown", "arrowleft", "arrowright", " "].includes(key)
-      ) {
-        event.preventDefault();
-      }
-
-      keys.add(key);
-
-      if (event.code === "ShiftLeft") {
-        PLAYER_SPEED = SPRINT_SPEED;
-      }
-    });
-
-    window.addEventListener("keyup", (event) => {
-      keys.delete(event.key.toLowerCase());
-
-      if (event.code === "ShiftLeft") {
-        PLAYER_SPEED = WALK_SPEED;
-      }
-    });
-
-    window.addEventListener("blur", () => {
-      keys.clear();
-      PLAYER_SPEED = WALK_SPEED;
-    });
-
-  </script>
-</body>
-</html>
-
-
