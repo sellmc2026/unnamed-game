@@ -289,26 +289,48 @@
     // ============================================================
     // PLAYER
     // ============================================================
+
+
+    const halfwayX = (player.x % TILE_SIZE) >= TILE_SIZE / 2;
+    const halfwayY = (player.y % TILE_SIZE) >= TILE_SIZE / 2;
+
+    
+
+    const maleFacingDown = new Image();
+    maleFacingDown.src = "characters/male/male-idle-forward.png";
+    
+    const maleFacingUp = new Image();
+    maleFacingUp.src = "characters/male/male-idle-forward.png";
+    
+    let maleFacingLeft = new Image();
+    maleFacingLeft.src = "characters/male/male-walking-left-1.png";
+    
+    let maleFacingRight = new Image();
+    maleFacingRight.src = "characters/male/male-walking-right-1.png";
+    
+    ctx.imageSmoothingEnabled = false;
+
+    
     function drawPlayer(screenX, screenY) {
-      const px = Math.floor(screenX - 12);
-      const py = Math.floor(screenY - 23);
-
-      function rect(x, y, w, h, color) {
-        ctx.fillStyle = color;
-        ctx.fillRect(px + x, py + y, w, h);
-      }
-
-      rect(3, 20, 18, 3, "#4e7950");
-      rect(5, 3, 14, 10, "#352b3b");
-      rect(6, 7, 12, 9, "#edbb92");
-      rect(7, 4, 10, 4, "#352b3b");
-      rect(5, 16, 14, 6, "#557cb4");
-      rect(5, 22, 5, 2, "#333d51");
-      rect(14, 22, 5, 2, "#333d51");
-
+      const size = 32; // Displays your 16x16 sprite at 2x scale
+    
+      const px = Math.floor(screenX - size / 2);
+      const py = Math.floor(screenY - size + 4);
+    
+      let sprite;
+    
       if (player.facing === "down") {
-        rect(9, 10, 2, 2, "#352b3b");
-        rect(14, 10, 2, 2, "#352b3b");
+        sprite = maleFacingDown;
+      } else if (player.facing === "up") {
+        sprite = maleFacingUp;
+      } else if (player.facing === "left") {
+        sprite = maleFacingLeft;
+      } else if (player.facing === "right") {
+        sprite = maleFacingRight;
+      }
+    
+      if (sprite && sprite.complete && sprite.naturalWidth > 0) {
+        ctx.drawImage(sprite, px, py, size, size);
       }
     }
 
@@ -352,6 +374,18 @@
       } else {
         player.facing = dy > 0 ? "down" : "up";
       }
+
+      if (keys.has("KeyA") || keys.has("ArrowLeft")) {
+        if (halfwayX === true) {
+          maleFacingLeft.src = "characters/male/male-walking-left-2.png";
+        else {
+          maleFacingLeft.src = "characters/male/male-walking-left-1.png";
+        }
+      }
+
+
+
+      
     }
 
     // ============================================================
