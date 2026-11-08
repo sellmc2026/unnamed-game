@@ -51,15 +51,18 @@
     // ============================================================
     const TILE_SIZE = 24;
     const PIXEL_SCALE = 3;  // Larger number = chunkier pixels.
-    let PLAYER_SPEED = 80; // World pixels per second.
+    let PLAYER_SPEED = 80; // Normal walking speed
 
     window.addEventListener("keydown", (event) => {
-      if (event.code === "ShiftLeft") {
-        if (event.repeat) {
-          let PLAYER_SPEED = 115;
-        return; 
-      }
-
+        if (event.code === "ShiftLeft") {
+            PLAYER_SPEED = 115;
+        }
+    });
+    
+    window.addEventListener("keyup", (event) => {
+        if (event.code === "ShiftLeft") {
+            PLAYER_SPEED = 80;
+        }
     });
 
     const canvas = document.getElementById("game");
