@@ -41,7 +41,7 @@
 
     const PLOT_COLUMNS = 5;
     const PLOT_ROWS = 5;
-    const PEDESTAL_GAP = 1;
+    const PEDESTAL_GAP = 2;
     const PLOT_PADDING = 1;
     const PLOT_GAP = 9;
     const PLOT_COLOR = "#d3d3d3";
@@ -127,7 +127,7 @@
 
           
           if (grassTexture.complete && grassTexture.naturalWidth > 0) {
-              ctx.drawImage(grassTexture, px, py, TILE_SIZE + 50, TILE_SIZE + 50);
+              ctx.drawImage(grassTexture, px, py, TILE_SIZE + 30, TILE_SIZE + 30);
           }
 
           if (n % 13 === 0) {
