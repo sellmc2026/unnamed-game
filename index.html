@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -45,12 +44,23 @@
   <script>
     "use strict";
 
+    
+
     // ============================================================
     // SETTINGS
     // ============================================================
     const TILE_SIZE = 24;
     const PIXEL_SCALE = 3;  // Larger number = chunkier pixels.
-    const PLAYER_SPEED = 115; // World pixels per second.
+    let PLAYER_SPEED = 80; // World pixels per second.
+
+    window.addEventListener("keydown", (event) => {
+      if (event.code === "ShiftLeft") {
+        if (event.repeat) {
+          let PLAYER_SPEED = 115;
+        return; 
+      }
+
+    });
 
     const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d", { alpha: false });
