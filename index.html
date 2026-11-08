@@ -662,8 +662,8 @@
 
       // 3. Player
       drawPlayer(
-        player.x - cameraX,
-        player.y - cameraY
+        Math.floor(canvas.width / 2),
+        Math.floor(canvas.height / 2)
       );
 
       // 4. Pedestals in front of player
