@@ -126,8 +126,9 @@
           const n = hash(tx, ty);
 
           
-          ctx.drawImage(grassTexture, px, py, TILE_SIZE, TILE_SIZE);
-          ctx.fillRect(px, py, TILE_SIZE + 1, TILE_SIZE + 1);
+          if (grassTexture.complete && grassTexture.naturalWidth > 0) {
+              ctx.drawImage(grassTexture, px, py, TILE_SIZE, TILE_SIZE);
+          }
 
           if (n % 13 === 0) {
             ctx.fillStyle = "#98ba7b";
