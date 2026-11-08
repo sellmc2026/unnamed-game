@@ -88,6 +88,9 @@
     const pedestalTexture = new Image();
     pedestalTexture.src = "textures/solid/pedestal-vacant.png";
 
+    const grassTexture = new Image();
+    grassTexture.src = "textures/tiles/grass-full.png";
+
     pedestalTexture.onerror = () => {
       console.error("Could not load pedestal-vacant.png");
     };
@@ -122,7 +125,8 @@
           const py = Math.floor(ty * TILE_SIZE - cameraY);
           const n = hash(tx, ty);
 
-          ctx.fillStyle = n % 7 < 2 ? "#719b68" : "#79a66e";
+          
+          ctx.drawImage(grassTexture, px, py, TILE_SIZE + 5, TILE_SIZE + 5);
           ctx.fillRect(px, py, TILE_SIZE + 1, TILE_SIZE + 1);
 
           if (n % 13 === 0) {
@@ -137,6 +141,8 @@
         }
       }
     }
+
+    
 
     // ============================================================
     // PLOTS AND PEDESTALS
