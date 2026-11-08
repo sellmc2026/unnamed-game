@@ -91,6 +91,7 @@
       width: 12,
       height: 6,
       facing: "down",
+      forwardSide: "left",
 
       moving: false,
       walkDistance: 0,
@@ -122,6 +123,17 @@
     // ============================================================
     // PLAYER SPRITES
     // ============================================================
+    const maleIdleDownRight = loadImage(
+      "characters/male/male-forward-idle-right.png"
+    );
+    
+    const maleWalkingDownRight1 = loadImage(
+      "characters/male/male-forward-walking-1-right.png"
+    );
+    
+    const maleWalkingDownRight2 = loadImage(
+      "characters/male/male-forward-walking-2-right.png"
+    );
 
     // Facing down
     const maleIdleDown = loadImage(
@@ -475,30 +487,34 @@
     // ============================================================
     function getPlayerSprite() {
       const sprites = playerSprites[player.facing];
-
-      if (!sprites) {
-        return maleIdleDown;
-      }
-
-      // Standing still: show idle sprite.
+    
+      // Standing still
       if (!player.moving) {
-        return sprites.idle;
+        if (player.facing === "up") {
+          return maleIdleUp;
+        }
+    
+        return player.forwardSide === "right"
+          ? maleIdleDownRight
+          : maleIdleDown;
       }
-
-      // Moving: alternate between walking frames.
-      const sprite = sprites.walking[player.walkFrame];
-
-      // Fallback if an animation PNG is missing.
-      if (
-        sprite.complete &&
-        sprite.naturalWidth > 0
-      ) {
-        return sprite;
+    
+      // Walking forward (down)
+      if (player.facing === "down") {
+        if (player.forwardSide === "right") {
+          return player.walkFrame === 0
+            ? maleWalkingDownRight1
+            : maleWalkingDownRight2;
+        }
+    
+        return player.walkFrame === 0
+          ? maleWalkingDown1
+          : maleWalkingDown2;
       }
-
-      return sprites.walking[0];
+    
+      // Walking backward, left or right
+      return sprites.walking[player.walkFrame];
     }
-
     // ============================================================
     // DRAW PLAYER
     // ============================================================
@@ -691,6 +707,17 @@
         event.preventDefault();
       }
 
+
+      if (!keys.has(event.code)) {
+        if (event.code === "KeyD" || event.code === "ArrowRight") {
+          player.forwardSide = "right";
+        }
+      
+        if (event.code === "KeyA" || event.code === "ArrowLeft") {
+          player.forwardSide = "left";
+        }
+      }
+      
       keys.add(event.code);
     });
 
