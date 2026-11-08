@@ -297,7 +297,7 @@
     maleFacingDown.src = "characters/male/male-idle-forward.png";
     
     const maleFacingUp = new Image();
-    maleFacingUp.src = "characters/male/male-idle-forward.png";
+    maleFacingUp.src = "characters/male/male-backward-idle.png";
     
     let maleFacingLeft = new Image();
     maleFacingLeft.src = "characters/male/male-walking-left-1.png";
@@ -381,6 +381,21 @@
           maleFacingLeft.src = "characters/male/male-walking-left-2.png";
         } else {
           maleFacingLeft.src = "characters/male/male-walking-left-1.png";
+        }
+      }
+      
+      if (keys.has("KeyW") || keys.has("ArrowUp")) {
+        if (halfwayX === true) {
+          maleFacingUp.src = "characters/male/male-backward-walking-1.png";
+        } else {
+          maleFacingUp.src = "characters/male/male-backward-walking-2.png";
+        }
+      }
+      if (keys.has("KeyS") || keys.has("ArrowDown")) {
+        if (halfwayX === true) {
+          maleFacingDown.src = "characters/male/male-forward-walking-1.png";
+        } else {
+          maleFacingDown.src = "characters/male/male-forward-walking-2.png";
         }
       }
 
