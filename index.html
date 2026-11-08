@@ -35,9 +35,42 @@
     "use strict";
 
     // ============================================================
+    // COLLISION CHECKING
+    // ============================================================
+    function isPositionSolid(worldX, worldY) {
+      // 1. Calculate which plot this world coordinate falls into
+      const plotX = Math.floor((worldX - PLOT_ORIGIN) / PLOT_SPACING);
+      const plotY = Math.floor((worldY - PLOT_ORIGIN) / PLOT_SPACING);
+    
+      // 2. Find the top-left coordinate of that specific plot
+      const plotLeft = PLOT_ORIGIN + plotX * PLOT_SPACING;
+      const plotTop  = PLOT_ORIGIN + plotY * PLOT_SPACING;
+    
+      // 3. Find where the player is *relative* to the start of this specific plot
+      const localX = worldX - plotLeft;
+      const localY = worldY - plotTop;
+    
+      // 4. Convert that local offset into tile units inside the plot
+      const tileX = Math.floor(localX / TILE_SIZE);
+      const tileY = Math.floor(localY / TILE_SIZE);
+    
+      // 5. Calculate where pedestals are allowed to exist inside a plot
+      // Deduct padding, then see if the tile lines up perfectly with the PEDESTAL_GAP spacing
+      const innerTileX = tileX - PLOT_PADDING;
+      const innerTileY = tileY - PLOT_PADDING;
+    
+      const hitColumn = innerTileX >= 0 && innerTileX < (PLOT_COLUMNS * (1 + PEDESTAL_GAP)) && (innerTileX % (1 + PEDESTAL_GAP) === 0);
+      const hitRow    = innerTileY >= 0 && innerTileY < (PLOT_ROWS * (1 + PEDESTAL_GAP)) && (innerTileY % (1 + PEDESTAL_GAP) === 0);
+    
+      // If we line up with both a pedestal row and column, it's a solid wall!
+      return hitColumn && hitRow;
+    }
+
+
+    // ============================================================
     // SETTINGS
     // ============================================================
-    const TILE_SIZE = 32;
+    const TILE_SIZE = 16;
     const PIXEL_SCALE = 3;
 
     const WALK_SPEED = 80;
@@ -100,11 +133,16 @@
     // ============================================================
     // GAME STATE
     // ============================================================
+
     const player = {
       x: 0,
       y: 0,
-      facing: "down"
+      facing: "down",
+      
+      width: 12, 
+      height: 6
     };
+
 
     const keys = new Set();
 
@@ -284,8 +322,8 @@
     // ============================================================
     // UPDATE
     // ============================================================
-    function update(dt) {
 
+    function update(dt) {
       let dx =
         Number(keys.has("d") || keys.has("arrowright")) -
         Number(keys.has("a") || keys.has("arrowleft"));
@@ -296,13 +334,47 @@
 
       if (dx || dy) {
         const length = Math.hypot(dx, dy);
-
         dx /= length;
         dy /= length;
 
-        player.x += dx * PLAYER_SPEED * dt;
-        player.y += dy * PLAYER_SPEED * dt;
+        const moveX = dx * PLAYER_SPEED * dt;
+        const moveY = dy * PLAYER_SPEED * dt;
 
+        // Half widths/heights to treat player.x/y as the center point of their feet
+        const hW = player.width / 2;
+        const hH = player.height / 2;
+
+        // --- TRY HORIZONTAL MOVEMENT ---
+        let nextX = player.x + moveX;
+        
+        // Check corners of the feet box on the target X position
+        if (
+          isPositionSolid(nextX - hW, player.y - hH) || // Top-Left
+          isPositionSolid(nextX + hW, player.y - hH) || // Top-Right
+          isPositionSolid(nextX - hW, player.y + hH) || // Bottom-Left
+          isPositionSolid(nextX + hW, player.y + hH)    // Bottom-Right
+        ) {
+          // Hit a wall block horizontally! Do nothing (don't update player.x)
+        } else {
+          player.x = nextX;
+        }
+
+        // --- TRY VERTICAL MOVEMENT ---
+        let nextY = player.y + moveY;
+
+        // Check corners of the feet box on the target Y position
+        if (
+          isPositionSolid(player.x - hW, nextY - hH) || // Top-Left
+          isPositionSolid(player.x + hW, nextY - hH) || // Top-Right
+          isPositionSolid(player.x - hW, nextY + hH) || // Bottom-Left
+          isPositionSolid(player.x + hW, nextY + hH)    // Bottom-Right
+        ) {
+          // Hit a wall block vertically! Do nothing (don't update player.y)
+        } else {
+          player.y = nextY;
+        }
+
+        // --- FACING DIRECTION ---
         if (Math.abs(dx) > Math.abs(dy)) {
           player.facing = dx > 0 ? "right" : "left";
         } else {
@@ -310,6 +382,7 @@
         }
       }
     }
+
 
     // ============================================================
     // DRAW
