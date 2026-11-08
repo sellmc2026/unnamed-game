@@ -291,9 +291,6 @@
     // ============================================================
 
 
-    const halfwayX = (player.x % TILE_SIZE) >= TILE_SIZE / 2;
-    const halfwayY = (player.y % TILE_SIZE) >= TILE_SIZE / 2;
-
     
 
     const maleFacingDown = new Image();
@@ -348,6 +345,10 @@
 
       if (dx === 0 && dy === 0) return;
 
+
+      const halfwayX = (((player.x % TILE_SIZE) + TILE_SIZE) % TILE_SIZE) >= TILE_SIZE / 2;
+      const halfwayY = (((player.y % TILE_SIZE) + TILE_SIZE) % TILE_SIZE) >= TILE_SIZE / 2;
+      
       const length = Math.hypot(dx, dy);
 
       dx /= length;
@@ -378,7 +379,7 @@
       if (keys.has("KeyA") || keys.has("ArrowLeft")) {
         if (halfwayX === true) {
           maleFacingLeft.src = "characters/male/male-walking-left-2.png";
-        else {
+        } else {
           maleFacingLeft.src = "characters/male/male-walking-left-1.png";
         }
       }
