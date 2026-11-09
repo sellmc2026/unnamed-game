@@ -1,15 +1,11 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pixel Pet Game</title>
-
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     html, body {
       width: 100%;
@@ -38,13 +34,9 @@
     // ============================================================
     const TILE_SIZE = 16;
     const PIXEL_SCALE = 3;
-
     const WALK_SPEED = 80;
     const SPRINT_SPEED = 115;
-
     const PLAYER_SPRITE_SIZE = 32;
-
-    // Change walking frame every half tile traveled.
     const WALK_FRAME_DISTANCE = TILE_SIZE / 2;
 
     const PLOT_COLUMNS = 5;
@@ -53,11 +45,8 @@
     const PLOT_PADDING = 1;
     const PLOT_GAP = 9;
     const PLOT_COLOR = "#d3d3d3";
-
-    // Pedestal appearance and collision
     const PEDESTAL_SCALE = 1.5;
     const PEDESTAL_HITBOX_HEIGHT = 6;
-
     const PEDESTAL_STEP = PEDESTAL_GAP + 1;
 
     const PLOT_WIDTH = (
@@ -74,7 +63,6 @@
 
     const PLOT_STEP_X = PLOT_WIDTH + PLOT_GAP * TILE_SIZE;
     const PLOT_STEP_Y = PLOT_HEIGHT + PLOT_GAP * TILE_SIZE;
-
     const PLOT_ORIGIN_X = -PLOT_WIDTH / 2;
     const PLOT_ORIGIN_Y = -PLOT_HEIGHT / 2;
 
@@ -92,11 +80,9 @@
       height: 6,
       facing: "down",
       forwardSide: "left",
-
       moving: false,
       walkDistance: 0,
-      walkFrame: 0,
-      lastHorizontal: "right"
+      walkFrame: 0
     };
 
     // ============================================================
@@ -113,6 +99,10 @@
       return img;
     }
 
+    function imageReady(img) {
+      return img && img.complete && img.naturalWidth > 0;
+    }
+
     const pedestalTexture = loadImage(
       "textures/solid/pedestal-vacant.png"
     );
@@ -124,78 +114,114 @@
     // ============================================================
     // PLAYER SPRITES
     // ============================================================
-    
-    // Down
+
+    // Forward - original left-facing version
     const maleIdleDown = loadImage(
       "characters/male/male-idle-forward.png"
     );
-    
+
     const maleWalkingDown1 = loadImage(
       "characters/male/male-forward-walking-1.png"
     );
-    
+
     const maleWalkingDown2 = loadImage(
       "characters/male/male-forward-walking-2.png"
     );
-    
-    // Up
+
+    // Forward - right-facing version
+    const maleIdleDownRight = loadImage(
+      "characters/male/male-forward-idle-right.png"
+    );
+
+    const maleWalkingDownRight1 = loadImage(
+      "characters/male/male-forward-walking-1-right.png"
+    );
+
+    const maleWalkingDownRight2 = loadImage(
+      "characters/male/male-forward-walking-2-right.png"
+    );
+
+    // Backward
     const maleIdleUp = loadImage(
       "characters/male/male-backward-idle.png"
     );
-    
+
     const maleWalkingUp1 = loadImage(
       "characters/male/male-backward-walking-1.png"
     );
-    
+
     const maleWalkingUp2 = loadImage(
       "characters/male/male-backward-walking-2.png"
     );
-    
+
     // Left
     const maleIdleLeft = loadImage(
       "characters/male/male-left-idle.png"
     );
-    
+
     const maleWalkingLeft1 = loadImage(
       "characters/male/male-left-walking-1.png"
     );
-    
+
     const maleWalkingLeft2 = loadImage(
       "characters/male/male-left-walking-2.png"
     );
-    
+
     // Right
     const maleIdleRight = loadImage(
       "characters/male/male-right-idle.png"
     );
-    
+
     const maleWalkingRight1 = loadImage(
       "characters/male/male-right-walking-1.png"
     );
-    
+
     const maleWalkingRight2 = loadImage(
       "characters/male/male-right-walking-2.png"
     );
-    
+
+    // ============================================================
+    // SPRITE GROUPS
+    // ============================================================
     const playerSprites = {
-      down: {
+      downLeft: {
         idle: maleIdleDown,
-        walking: [maleWalkingDown1, maleWalkingDown2]
+        walking: [
+          maleWalkingDown1,
+          maleWalkingDown2
+        ]
       },
-    
+
+      downRight: {
+        idle: maleIdleDownRight,
+        walking: [
+          maleWalkingDownRight1,
+          maleWalkingDownRight2
+        ]
+      },
+
       up: {
         idle: maleIdleUp,
-        walking: [maleWalkingUp1, maleWalkingUp2]
+        walking: [
+          maleWalkingUp1,
+          maleWalkingUp2
+        ]
       },
-    
+
       left: {
         idle: maleIdleLeft,
-        walking: [maleWalkingLeft1, maleWalkingLeft2]
+        walking: [
+          maleWalkingLeft1,
+          maleWalkingLeft2
+        ]
       },
-    
+
       right: {
         idle: maleIdleRight,
-        walking: [maleWalkingRight1, maleWalkingRight2]
+        walking: [
+          maleWalkingRight1,
+          maleWalkingRight2
+        ]
       }
     };
 
@@ -234,8 +260,8 @@
     }
 
     function drawGround(cameraX, cameraY) {
-      // Background while grass texture loads.
       ctx.fillStyle = "#79a66e";
+
       ctx.fillRect(
         0,
         0,
@@ -254,10 +280,6 @@
         (cameraY + canvas.height) / TILE_SIZE
       ) + 1;
 
-      const textureReady =
-        grassTexture.complete &&
-        grassTexture.naturalWidth > 0;
-
       for (let ty = top; ty <= bottom; ty++) {
         for (let tx = left; tx <= right; tx++) {
           const px = Math.floor(
@@ -270,7 +292,7 @@
 
           const n = hash(tx, ty);
 
-          if (textureReady) {
+          if (imageReady(grassTexture)) {
             ctx.drawImage(
               grassTexture,
               px,
@@ -282,22 +304,12 @@
 
           if (n % 13 === 0) {
             ctx.fillStyle = "#98ba7b";
-            ctx.fillRect(
-              px + 6,
-              py + 9,
-              2,
-              3
-            );
+            ctx.fillRect(px + 6, py + 9, 2, 3);
           }
 
           if (n % 23 === 0) {
             ctx.fillStyle = "#648e5e";
-            ctx.fillRect(
-              px + 11,
-              py + 12,
-              2,
-              2
-            );
+            ctx.fillRect(px + 11, py + 12, 2, 2);
           }
         }
       }
@@ -323,10 +335,6 @@
         (cameraY + canvas.height - PLOT_ORIGIN_Y) / PLOT_STEP_Y
       );
 
-      const textureReady =
-        pedestalTexture.complete &&
-        pedestalTexture.naturalWidth > 0;
-
       const pedestalSize = Math.round(
         TILE_SIZE * PEDESTAL_SCALE
       );
@@ -342,7 +350,6 @@
           const x = Math.floor(worldX - cameraX);
           const y = Math.floor(worldY - cameraY);
 
-          // Draw plot floors on background pass.
           if (!foreground) {
             ctx.fillStyle = PLOT_COLOR;
 
@@ -354,7 +361,9 @@
             );
           }
 
-          if (!textureReady) continue;
+          if (!imageReady(pedestalTexture)) {
+            continue;
+          }
 
           for (let row = 0; row < PLOT_ROWS; row++) {
             for (let col = 0; col < PLOT_COLUMNS; col++) {
@@ -366,11 +375,9 @@
                 PLOT_PADDING + row * PEDESTAL_STEP
               ) * TILE_SIZE;
 
-              // Pedestal's original ground position.
               const pedestalFeetY =
                 worldY + tileY + TILE_SIZE;
 
-              // Draw lower objects in front of player.
               const inFrontOfPlayer =
                 pedestalFeetY > player.y;
 
@@ -379,16 +386,12 @@
               }
 
               const px = Math.round(
-                x +
-                tileX -
+                x + tileX -
                 (pedestalSize - TILE_SIZE) / 2
               );
 
               const py = Math.round(
-                y +
-                tileY +
-                TILE_SIZE -
-                pedestalSize
+                y + tileY + TILE_SIZE - pedestalSize
               );
 
               ctx.drawImage(
@@ -424,7 +427,6 @@
         PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y
       );
 
-      // Grass outside plots has no collision.
       if (
         localX >= PLOT_WIDTH ||
         localY >= PLOT_HEIGHT
@@ -448,7 +450,6 @@
 
       if (!isPedestal) return false;
 
-      // Only the bottom portion of the tile is solid.
       const pixelY = localY % TILE_SIZE;
 
       return pixelY >= (
@@ -472,32 +473,38 @@
     // PLAYER SPRITE SELECTION
     // ============================================================
     function getPlayerSprite() {
-      const sprites = playerSprites[player.facing];
-    
-      if (!player.moving) {
-        if (player.facing === "down") {
-          return player.forwardSide === "right"
-            ? maleIdleDownRight
-            : maleIdleDown;
-        }
-    
-        return sprites.idle;
-      }
-    
+      let sprites;
+
+      // Forward-facing sprites depend on last left/right key.
       if (player.facing === "down") {
-        if (player.forwardSide === "right") {
-          return player.walkFrame === 0
-            ? maleWalkingDownRight1
-            : maleWalkingDownRight2;
-        }
-    
-        return player.walkFrame === 0
-          ? maleWalkingDown1
-          : maleWalkingDown2;
+        sprites = player.forwardSide === "right"
+          ? playerSprites.downRight
+          : playerSprites.downLeft;
+      } else {
+        sprites =
+          playerSprites[player.facing] ||
+          playerSprites.downLeft;
       }
-    
-      return sprites.walking[player.walkFrame];
+
+      // Idle or walking
+      const preferred = player.moving
+        ? sprites.walking[player.walkFrame]
+        : sprites.idle;
+
+      // Prevent missing right-facing PNGs from
+      // making the player disappear.
+      if (
+        player.facing === "down" &&
+        !imageReady(preferred)
+      ) {
+        return player.moving
+          ? playerSprites.downLeft.walking[player.walkFrame]
+          : playerSprites.downLeft.idle;
+      }
+
+      return preferred;
     }
+
     // ============================================================
     // DRAW PLAYER
     // ============================================================
@@ -514,11 +521,7 @@
 
       const sprite = getPlayerSprite();
 
-      if (
-        sprite &&
-        sprite.complete &&
-        sprite.naturalWidth > 0
-      ) {
+      if (imageReady(sprite)) {
         ctx.drawImage(
           sprite,
           px,
@@ -533,7 +536,7 @@
     // UPDATE
     // ============================================================
     function update(dt) {
-      let dx =
+      const inputX =
         Number(
           keys.has("KeyD") ||
           keys.has("ArrowRight")
@@ -543,7 +546,7 @@
           keys.has("ArrowLeft")
         );
 
-      let dy =
+      const inputY =
         Number(
           keys.has("KeyS") ||
           keys.has("ArrowDown")
@@ -553,18 +556,18 @@
           keys.has("ArrowUp")
         );
 
-      // Player isn't pressing movement keys.
-      if (dx === 0 && dy === 0) {
+      // No movement input
+      if (inputX === 0 && inputY === 0) {
         player.moving = false;
         player.walkDistance = 0;
         player.walkFrame = 0;
         return;
       }
 
-      const length = Math.hypot(dx, dy);
+      const length = Math.hypot(inputX, inputY);
 
-      dx /= length;
-      dy /= length;
+      const dx = inputX / length;
+      const dy = inputY / length;
 
       const speed = keys.has("ShiftLeft")
         ? SPRINT_SPEED
@@ -573,15 +576,15 @@
       const moveX = dx * speed * dt;
       const moveY = dy * speed * dt;
 
-      // Remember position to detect actual movement.
       const previousX = player.x;
       const previousY = player.y;
 
-      // Horizontal and vertical collision separately.
+      // Horizontal collision
       if (canMoveTo(player.x + moveX, player.y)) {
         player.x += moveX;
       }
 
+      // Vertical collision
       if (canMoveTo(player.x, player.y + moveY)) {
         player.y += moveY;
       }
@@ -589,37 +592,36 @@
       // ============================================================
       // FACING DIRECTION
       // ============================================================
-      if (Math.abs(dx) > Math.abs(dy)) {
-        player.facing = dx > 0 ? "right" : "left";
+
+      // Vertical movement takes priority for diagonals.
+      // Down + Right = forward-right sprites
+      // Down + Left  = forward-left sprites
+      // Up + Right/Left = backward sprites
+      // Only horizontal = sideways sprites
+
+      if (inputY !== 0) {
+        player.facing = inputY > 0 ? "down" : "up";
       } else {
-        player.facing = dy > 0 ? "down" : "up";
+        player.facing = inputX > 0 ? "right" : "left";
       }
 
       // ============================================================
       // WALKING ANIMATION
       // ============================================================
-
-      // Calculate how far player actually moved.
-      const traveledX = player.x - previousX;
-      const traveledY = player.y - previousY;
-
       const distanceMoved = Math.hypot(
-        traveledX,
-        traveledY
+        player.x - previousX,
+        player.y - previousY
       );
 
       player.moving = distanceMoved > 0.0001;
 
       if (player.moving) {
-        // Add actual distance traveled.
         player.walkDistance += distanceMoved;
 
-        // Every half tile, change animation frame.
         player.walkFrame = Math.floor(
           player.walkDistance / WALK_FRAME_DISTANCE
         ) % 2;
       } else {
-        // Player stopped or hit an obstacle.
         player.walkDistance = 0;
         player.walkFrame = 0;
       }
@@ -637,19 +639,19 @@
         player.y - canvas.height / 2
       );
 
-      // 1. Grass
+      // Grass
       drawGround(cameraX, cameraY);
 
-      // 2. Plot floors and pedestals behind player
+      // Plots and pedestals behind player
       drawPlots(cameraX, cameraY, false);
 
-      // 3. Player
+      // Player remains centered
       drawPlayer(
         Math.floor(canvas.width / 2),
         Math.floor(canvas.height / 2)
       );
 
-      // 4. Pedestals in front of player
+      // Pedestals in front of player
       drawPlots(cameraX, cameraY, true);
     }
 
@@ -690,25 +692,22 @@
         event.preventDefault();
       }
 
-
+      // Remember the last horizontal direction.
+      // Only update when a key is first pressed.
       if (!keys.has(event.code)) {
-        if (event.code === "KeyD" || event.code === "ArrowRight") {
+        if (
+          event.code === "KeyD" ||
+          event.code === "ArrowRight"
+        ) {
           player.forwardSide = "right";
-        }
-      
-        if (event.code === "KeyA" || event.code === "ArrowLeft") {
+        } else if (
+          event.code === "KeyA" ||
+          event.code === "ArrowLeft"
+        ) {
           player.forwardSide = "left";
         }
       }
-      
-      if (event.code === "KeyA" || event.code === "ArrowLeft") {
-        player.lastHorizontal = "left";
-      }
-      
-      if (event.code === "KeyD" || event.code === "ArrowRight") {
-        player.lastHorizontal = "right";
-      }
-      
+
       keys.add(event.code);
     });
 
@@ -722,7 +721,6 @@
       player.walkDistance = 0;
       player.walkFrame = 0;
     });
-
   </script>
 </body>
 </html>
