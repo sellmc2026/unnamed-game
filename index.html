@@ -474,12 +474,26 @@
     function getPlayerSprite() {
       const sprites = playerSprites[player.facing];
     
-      if (!sprites) {
-        return maleIdleDown;
+      if (!player.moving) {
+        if (player.facing === "down") {
+          return player.forwardSide === "right"
+            ? maleIdleDownRight
+            : maleIdleDown;
+        }
+    
+        return sprites.idle;
       }
     
-      if (!player.moving) {
-        return sprites.idle;
+      if (player.facing === "down") {
+        if (player.forwardSide === "right") {
+          return player.walkFrame === 0
+            ? maleWalkingDownRight1
+            : maleWalkingDownRight2;
+        }
+    
+        return player.walkFrame === 0
+          ? maleWalkingDown1
+          : maleWalkingDown2;
       }
     
       return sprites.walking[player.walkFrame];
@@ -575,12 +589,9 @@
       // ============================================================
       // FACING DIRECTION
       // ============================================================
-      if (dx !== 0 && dy !== 0) {
-        
-        player.facing = player.lastHorizontal;
-      } else if (dx !== 0) {
+      if (Math.abs(dx) > Math.abs(dy)) {
         player.facing = dx > 0 ? "right" : "left";
-      } else if (dy !== 0) {
+      } else {
         player.facing = dy > 0 ? "down" : "up";
       }
 
