@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,19 +7,12 @@
   <title>Pixel Pet Game</title>
   <style>
     * { box-sizing: border-box; }
-
     html, body {
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      overflow: hidden;
+      width: 100%; height: 100%; margin: 0; overflow: hidden;
       background: #79a66e;
     }
-
     canvas {
-      display: block;
-      width: 100vw;
-      height: 100vh;
+      display: block; width: 100vw; height: 100vh;
       image-rendering: pixelated;
     }
   </style>
@@ -50,21 +44,25 @@
     const PEDESTAL_STEP = PEDESTAL_GAP + 1;
 
     const PLOT_WIDTH = (
-      PLOT_COLUMNS +
-      (PLOT_COLUMNS - 1) * PEDESTAL_GAP +
+      PLOT_COLUMNS + (PLOT_COLUMNS - 1) * PEDESTAL_GAP +
       PLOT_PADDING * 2
     ) * TILE_SIZE;
-
     const PLOT_HEIGHT = (
-      PLOT_ROWS +
-      (PLOT_ROWS - 1) * PEDESTAL_GAP +
+      PLOT_ROWS + (PLOT_ROWS - 1) * PEDESTAL_GAP +
       PLOT_PADDING * 2
     ) * TILE_SIZE;
-
     const PLOT_STEP_X = PLOT_WIDTH + PLOT_GAP * TILE_SIZE;
     const PLOT_STEP_Y = PLOT_HEIGHT + PLOT_GAP * TILE_SIZE;
     const PLOT_ORIGIN_X = -PLOT_WIDTH / 2;
     const PLOT_ORIGIN_Y = -PLOT_HEIGHT / 2;
+
+    // Approximately 1 egg per 1,200 eligible grass tiles.
+    // Lower this number to make eggs more common.
+    const EGG_RARITY = 1200;
+    const EGG_PICKUP_DISTANCE = 25;
+    const INVENTORY_SLOTS = 24;
+    const MAX_STACK = 99;
+    const SAVE_KEY = "pixelPetGame.eggsAndInventory.v1";
 
     // ============================================================
     // SETUP
@@ -74,27 +72,98 @@
     const keys = new Set();
 
     const player = {
-      x: -16,
-      y: -16,
-      width: 12,
-      height: 6,
-      facing: "down",
-      forwardSide: "left",
-      moving: false,
-      walkDistance: 0,
-      walkFrame: 0
+      x: -16, y: -16, width: 12, height: 6,
+      facing: "down", forwardSide: "left", moving: false,
+      walkDistance: 0, walkFrame: 0
     };
+
+    // Inventory slots can hold other item types in the future.
+    const inventory = Array(INVENTORY_SLOTS).fill(null);
+    const collectedEggs = new Set();
+    let inventoryOpen = false;
+    let selectedSlot = -1;
+    let gameTime = 0;
+    let notification = "";
+    let notificationTime = 0;
+
+    function showMessage(text) {
+      notification = text;
+      notificationTime = 2.4;
+    }
+
+    function saveGame() {
+      try {
+        localStorage.setItem(SAVE_KEY, JSON.stringify({
+          inventory, collectedEggs: Array.from(collectedEggs)
+        }));
+      } catch (error) {
+        console.warn("Unable to save game locally:", error);
+      }
+    }
+
+    function loadGame() {
+      try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (Array.isArray(data.inventory)) {
+          for (let i = 0; i < INVENTORY_SLOTS; i++) {
+            const item = data.inventory[i];
+            if (item && item.type === "egg" &&
+                Number.isInteger(item.count) &&
+                item.count > 0 && item.count <= MAX_STACK) {
+              inventory[i] = { type: "egg", count: item.count };
+            }
+          }
+        }
+        if (Array.isArray(data.collectedEggs)) {
+          for (const key of data.collectedEggs) {
+            if (typeof key === "string") collectedEggs.add(key);
+          }
+        }
+      } catch (error) {
+        console.warn("Unable to load saved game:", error);
+      }
+    }
+
+    function addInventoryItem(type, amount = 1) {
+      // Check capacity before modifying anything.
+      let available = 0;
+      for (const slot of inventory) {
+        if (slot === null) available += MAX_STACK;
+        else if (slot.type === type) available += MAX_STACK - slot.count;
+      }
+      if (available < amount) return false;
+
+      for (const slot of inventory) {
+        if (amount === 0) break;
+        if (!slot || slot.type !== type) continue;
+        const added = Math.min(MAX_STACK - slot.count, amount);
+        slot.count += added;
+        amount -= added;
+      }
+      for (let i = 0; i < inventory.length && amount > 0; i++) {
+        if (inventory[i] !== null) continue;
+        const added = Math.min(amount, MAX_STACK);
+        inventory[i] = { type, count: added };
+        amount -= added;
+      }
+      return true;
+    }
+
+    function countItems(type) {
+      return inventory.reduce((sum, slot) =>
+        sum + (slot && slot.type === type ? slot.count : 0), 0);
+    }
+
+    loadGame();
 
     // ============================================================
     // LOAD TEXTURES
     // ============================================================
     function loadImage(path) {
       const img = new Image();
-
-      img.onerror = () => {
-        console.error("Could not load image:", path);
-      };
-
+      img.onerror = () => console.error("Could not load image:", path);
       img.src = path;
       return img;
     }
@@ -103,143 +172,48 @@
       return img && img.complete && img.naturalWidth > 0;
     }
 
-    const pedestalTexture = loadImage(
-      "tiles/pedestal-vacant.png"
-    );
+    const pedestalTexture = loadImage("tiles/pedestal-vacant.png");
+    const grassTexture = loadImage("tiles/grass-full.png");
 
-    const grassTexture = loadImage(
-      "tiles/grass-full.png"
-    );
+    // Preserve all your current player sprite filenames.
+    const maleIdleDown = loadImage("characters/male/male-idle-forward.png");
+    const maleWalkingDown1 = loadImage("characters/male/male-forward-walking-1.png");
+    const maleWalkingDown2 = loadImage("characters/male/male-forward-walking-2.png");
+    const maleIdleDownRight = loadImage("characters/male/male-forward-idle-right.png");
+    const maleWalkingDownRight1 = loadImage("characters/male/male-forward-walking-1-right.png");
+    const maleWalkingDownRight2 = loadImage("characters/male/male-forward-walking-2-right.png");
+    const maleIdleUp = loadImage("characters/male/male-backward-idle.png");
+    const maleWalkingUp1 = loadImage("characters/male/male-backward-walking-1.png");
+    const maleWalkingUp2 = loadImage("characters/male/male-backward-walking-2.png");
+    const maleIdleLeft = loadImage("characters/male/male-left-idle.png");
+    const maleWalkingLeft1 = loadImage("characters/male/male-left-walking-1.png");
+    const maleWalkingLeft2 = loadImage("characters/male/male-left-walking-2.png");
+    const maleIdleRight = loadImage("characters/male/male-right-idle.png");
+    const maleWalkingRight1 = loadImage("characters/male/male-right-walking-1.png");
+    const maleWalkingRight2 = loadImage("characters/male/male-right-walking-2.png");
 
-    // ============================================================
-    // PLAYER SPRITES
-    // ============================================================
-
-    // Forward - original left-facing version
-    const maleIdleDown = loadImage(
-      "characters/male/male-idle-forward.png"
-    );
-
-    const maleWalkingDown1 = loadImage(
-      "characters/male/male-forward-walking-1.png"
-    );
-
-    const maleWalkingDown2 = loadImage(
-      "characters/male/male-forward-walking-2.png"
-    );
-
-    // Forward - right-facing version
-    const maleIdleDownRight = loadImage(
-      "characters/male/male-forward-idle-right.png"
-    );
-
-    const maleWalkingDownRight1 = loadImage(
-      "characters/male/male-forward-walking-1-right.png"
-    );
-
-    const maleWalkingDownRight2 = loadImage(
-      "characters/male/male-forward-walking-2-right.png"
-    );
-
-    // Backward
-    const maleIdleUp = loadImage(
-      "characters/male/male-backward-idle.png"
-    );
-
-    const maleWalkingUp1 = loadImage(
-      "characters/male/male-backward-walking-1.png"
-    );
-
-    const maleWalkingUp2 = loadImage(
-      "characters/male/male-backward-walking-2.png"
-    );
-
-    // Left
-    const maleIdleLeft = loadImage(
-      "characters/male/male-left-idle.png"
-    );
-
-    const maleWalkingLeft1 = loadImage(
-      "characters/male/male-left-walking-1.png"
-    );
-
-    const maleWalkingLeft2 = loadImage(
-      "characters/male/male-left-walking-2.png"
-    );
-
-    // Right
-    const maleIdleRight = loadImage(
-      "characters/male/male-right-idle.png"
-    );
-
-    const maleWalkingRight1 = loadImage(
-      "characters/male/male-right-walking-1.png"
-    );
-
-    const maleWalkingRight2 = loadImage(
-      "characters/male/male-right-walking-2.png"
-    );
-
-    // ============================================================
-    // SPRITE GROUPS
-    // ============================================================
     const playerSprites = {
       downLeft: {
         idle: maleIdleDown,
-        walking: [
-          maleWalkingDown1,
-          maleWalkingDown2
-        ]
+        walking: [maleWalkingDown1, maleWalkingDown2]
       },
-
       downRight: {
         idle: maleIdleDownRight,
-        walking: [
-          maleWalkingDownRight1,
-          maleWalkingDownRight2
-        ]
+        walking: [maleWalkingDownRight1, maleWalkingDownRight2]
       },
-
-      up: {
-        idle: maleIdleUp,
-        walking: [
-          maleWalkingUp1,
-          maleWalkingUp2
-        ]
-      },
-
-      left: {
-        idle: maleIdleLeft,
-        walking: [
-          maleWalkingLeft1,
-          maleWalkingLeft2
-        ]
-      },
-
-      right: {
-        idle: maleIdleRight,
-        walking: [
-          maleWalkingRight1,
-          maleWalkingRight2
-        ]
-      }
+      up: { idle: maleIdleUp, walking: [maleWalkingUp1, maleWalkingUp2] },
+      left: { idle: maleIdleLeft, walking: [maleWalkingLeft1, maleWalkingLeft2] },
+      right: { idle: maleIdleRight, walking: [maleWalkingRight1, maleWalkingRight2] }
     };
 
     // ============================================================
     // RESIZE
     // ============================================================
     function resize() {
-      canvas.width = Math.ceil(
-        window.innerWidth / PIXEL_SCALE
-      );
-
-      canvas.height = Math.ceil(
-        window.innerHeight / PIXEL_SCALE
-      );
-
+      canvas.width = Math.ceil(window.innerWidth / PIXEL_SCALE);
+      canvas.height = Math.ceil(window.innerHeight / PIXEL_SCALE);
       ctx.imageSmoothingEnabled = false;
     }
-
     window.addEventListener("resize", resize);
     resize();
 
@@ -247,66 +221,32 @@
     // GROUND
     // ============================================================
     function hash(x, y) {
-      let h =
-        Math.imul(x, 374761393) +
-        Math.imul(y, 668265263);
-
-      h = Math.imul(
-        h ^ (h >>> 13),
-        1274126177
-      );
-
+      let h = Math.imul(x, 374761393) + Math.imul(y, 668265263);
+      h = Math.imul(h ^ (h >>> 13), 1274126177);
       return (h ^ (h >>> 16)) >>> 0;
     }
 
     function drawGround(cameraX, cameraY) {
       ctx.fillStyle = "#79a66e";
-
-      ctx.fillRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       const left = Math.floor(cameraX / TILE_SIZE);
       const top = Math.floor(cameraY / TILE_SIZE);
-
-      const right = Math.floor(
-        (cameraX + canvas.width) / TILE_SIZE
-      ) + 1;
-
-      const bottom = Math.floor(
-        (cameraY + canvas.height) / TILE_SIZE
-      ) + 1;
+      const right = Math.floor((cameraX + canvas.width) / TILE_SIZE) + 1;
+      const bottom = Math.floor((cameraY + canvas.height) / TILE_SIZE) + 1;
 
       for (let ty = top; ty <= bottom; ty++) {
         for (let tx = left; tx <= right; tx++) {
-          const px = Math.floor(
-            tx * TILE_SIZE - cameraX
-          );
-
-          const py = Math.floor(
-            ty * TILE_SIZE - cameraY
-          );
-
+          const px = Math.floor(tx * TILE_SIZE - cameraX);
+          const py = Math.floor(ty * TILE_SIZE - cameraY);
           const n = hash(tx, ty);
-
           if (imageReady(grassTexture)) {
-            ctx.drawImage(
-              grassTexture,
-              px,
-              py,
-              TILE_SIZE + 30,
-              TILE_SIZE + 30
-            );
+            ctx.drawImage(grassTexture, px, py, TILE_SIZE + 30, TILE_SIZE + 30);
           }
-
           if (n % 13 === 0) {
             ctx.fillStyle = "#98ba7b";
             ctx.fillRect(px + 6, py + 9, 2, 3);
           }
-
           if (n % 23 === 0) {
             ctx.fillStyle = "#648e5e";
             ctx.fillRect(px + 11, py + 12, 2, 2);
@@ -319,88 +259,35 @@
     // PLOTS AND PEDESTALS
     // ============================================================
     function drawPlots(cameraX, cameraY, foreground = false) {
-      const firstX = Math.floor(
-        (cameraX - PLOT_ORIGIN_X - PLOT_WIDTH) / PLOT_STEP_X
-      );
-
-      const lastX = Math.floor(
-        (cameraX + canvas.width - PLOT_ORIGIN_X) / PLOT_STEP_X
-      );
-
-      const firstY = Math.floor(
-        (cameraY - PLOT_ORIGIN_Y - PLOT_HEIGHT) / PLOT_STEP_Y
-      );
-
-      const lastY = Math.floor(
-        (cameraY + canvas.height - PLOT_ORIGIN_Y) / PLOT_STEP_Y
-      );
-
-      const pedestalSize = Math.round(
-        TILE_SIZE * PEDESTAL_SCALE
-      );
+      const firstX = Math.floor((cameraX - PLOT_ORIGIN_X - PLOT_WIDTH) / PLOT_STEP_X);
+      const lastX = Math.floor((cameraX + canvas.width - PLOT_ORIGIN_X) / PLOT_STEP_X);
+      const firstY = Math.floor((cameraY - PLOT_ORIGIN_Y - PLOT_HEIGHT) / PLOT_STEP_Y);
+      const lastY = Math.floor((cameraY + canvas.height - PLOT_ORIGIN_Y) / PLOT_STEP_Y);
+      const pedestalSize = Math.round(TILE_SIZE * PEDESTAL_SCALE);
 
       for (let plotY = firstY; plotY <= lastY; plotY++) {
         for (let plotX = firstX; plotX <= lastX; plotX++) {
-          const worldX =
-            PLOT_ORIGIN_X + plotX * PLOT_STEP_X;
-
-          const worldY =
-            PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y;
-
+          const worldX = PLOT_ORIGIN_X + plotX * PLOT_STEP_X;
+          const worldY = PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y;
           const x = Math.floor(worldX - cameraX);
           const y = Math.floor(worldY - cameraY);
 
           if (!foreground) {
             ctx.fillStyle = PLOT_COLOR;
-
-            ctx.fillRect(
-              x,
-              y,
-              PLOT_WIDTH,
-              PLOT_HEIGHT
-            );
+            ctx.fillRect(x, y, PLOT_WIDTH, PLOT_HEIGHT);
           }
-
-          if (!imageReady(pedestalTexture)) {
-            continue;
-          }
+          if (!imageReady(pedestalTexture)) continue;
 
           for (let row = 0; row < PLOT_ROWS; row++) {
             for (let col = 0; col < PLOT_COLUMNS; col++) {
-              const tileX = (
-                PLOT_PADDING + col * PEDESTAL_STEP
-              ) * TILE_SIZE;
+              const tileX = (PLOT_PADDING + col * PEDESTAL_STEP) * TILE_SIZE;
+              const tileY = (PLOT_PADDING + row * PEDESTAL_STEP) * TILE_SIZE;
+              const pedestalFeetY = worldY + tileY + TILE_SIZE;
+              if ((pedestalFeetY > player.y) !== foreground) continue;
 
-              const tileY = (
-                PLOT_PADDING + row * PEDESTAL_STEP
-              ) * TILE_SIZE;
-
-              const pedestalFeetY =
-                worldY + tileY + TILE_SIZE;
-
-              const inFrontOfPlayer =
-                pedestalFeetY > player.y;
-
-              if (inFrontOfPlayer !== foreground) {
-                continue;
-              }
-
-              const px = Math.round(
-                x + tileX -
-                (pedestalSize - TILE_SIZE) / 2
-              );
-
-              const py = Math.round(
-                y + tileY + TILE_SIZE - pedestalSize
-              );
-
-              ctx.drawImage(
-                pedestalTexture,
-                px,
-                py,
-                pedestalSize,
-                pedestalSize
-              );
+              const px = Math.round(x + tileX - (pedestalSize - TILE_SIZE) / 2);
+              const py = Math.round(y + tileY + TILE_SIZE - pedestalSize);
+              ctx.drawImage(pedestalTexture, px, py, pedestalSize, pedestalSize);
             }
           }
         }
@@ -408,59 +295,29 @@
     }
 
     // ============================================================
-    // PEDESTAL COLLISION
+    // PEDESTAL COLLISION (UNCHANGED)
     // ============================================================
     function isPositionSolid(worldX, worldY) {
-      const plotX = Math.floor(
-        (worldX - PLOT_ORIGIN_X) / PLOT_STEP_X
-      );
+      const plotX = Math.floor((worldX - PLOT_ORIGIN_X) / PLOT_STEP_X);
+      const plotY = Math.floor((worldY - PLOT_ORIGIN_Y) / PLOT_STEP_Y);
+      const localX = worldX - (PLOT_ORIGIN_X + plotX * PLOT_STEP_X);
+      const localY = worldY - (PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y);
+      if (localX >= PLOT_WIDTH || localY >= PLOT_HEIGHT) return false;
 
-      const plotY = Math.floor(
-        (worldY - PLOT_ORIGIN_Y) / PLOT_STEP_Y
-      );
-
-      const localX = worldX - (
-        PLOT_ORIGIN_X + plotX * PLOT_STEP_X
-      );
-
-      const localY = worldY - (
-        PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y
-      );
-
-      if (
-        localX >= PLOT_WIDTH ||
-        localY >= PLOT_HEIGHT
-      ) {
-        return false;
-      }
-
-      const colTile =
-        Math.floor(localX / TILE_SIZE) - PLOT_PADDING;
-
-      const rowTile =
-        Math.floor(localY / TILE_SIZE) - PLOT_PADDING;
-
+      const colTile = Math.floor(localX / TILE_SIZE) - PLOT_PADDING;
+      const rowTile = Math.floor(localY / TILE_SIZE) - PLOT_PADDING;
       const isPedestal =
-        colTile >= 0 &&
-        colTile < PLOT_COLUMNS * PEDESTAL_STEP &&
-        rowTile >= 0 &&
-        rowTile < PLOT_ROWS * PEDESTAL_STEP &&
+        colTile >= 0 && colTile < PLOT_COLUMNS * PEDESTAL_STEP &&
+        rowTile >= 0 && rowTile < PLOT_ROWS * PEDESTAL_STEP &&
         colTile % PEDESTAL_STEP === 0 &&
         rowTile % PEDESTAL_STEP === 0;
-
       if (!isPedestal) return false;
-
-      const pixelY = localY % TILE_SIZE;
-
-      return pixelY >= (
-        TILE_SIZE - PEDESTAL_HITBOX_HEIGHT
-      );
+      return localY % TILE_SIZE >= TILE_SIZE - PEDESTAL_HITBOX_HEIGHT;
     }
 
     function canMoveTo(x, y) {
       const halfW = player.width / 2;
       const halfH = player.height / 2;
-
       return !(
         isPositionSolid(x - halfW, y - halfH) ||
         isPositionSolid(x + halfW, y - halfH) ||
@@ -470,93 +327,274 @@
     }
 
     // ============================================================
-    // PLAYER SPRITE SELECTION
+    // VERY RARE EGGS ON THE GROUND
+    // Eggs are generated by their world tile coordinates, so they
+    // stay in the same place when you move away and come back.
+    // ============================================================
+    function isNearPlot(x, y, margin = 10) {
+      const localX = ((x - PLOT_ORIGIN_X) % PLOT_STEP_X + PLOT_STEP_X) % PLOT_STEP_X;
+      const localY = ((y - PLOT_ORIGIN_Y) % PLOT_STEP_Y + PLOT_STEP_Y) % PLOT_STEP_Y;
+      const nearPlotX = localX <= PLOT_WIDTH + margin ||
+                        localX >= PLOT_STEP_X - margin;
+      const nearPlotY = localY <= PLOT_HEIGHT + margin ||
+                        localY >= PLOT_STEP_Y - margin;
+      return nearPlotX && nearPlotY;
+    }
+
+    function getEggAtTile(tx, ty) {
+      // A separate hash from the grass decorations.
+      if (hash(tx + 839, ty - 1977) % EGG_RARITY !== 0) return null;
+      const x = tx * TILE_SIZE + TILE_SIZE / 2;
+      const y = ty * TILE_SIZE + TILE_SIZE / 2;
+      if (isNearPlot(x, y)) return null;
+      const key = `${tx},${ty}`;
+      if (collectedEggs.has(key)) return null;
+      return { x, y, key };
+    }
+
+    function getNearestEgg() {
+      const tx = Math.floor(player.x / TILE_SIZE);
+      const ty = Math.floor(player.y / TILE_SIZE);
+      let nearest = null;
+      let nearestDistanceSq = EGG_PICKUP_DISTANCE * EGG_PICKUP_DISTANCE;
+      for (let y = ty - 2; y <= ty + 2; y++) {
+        for (let x = tx - 2; x <= tx + 2; x++) {
+          const egg = getEggAtTile(x, y);
+          if (!egg) continue;
+          const dx = egg.x - player.x;
+          const dy = egg.y - player.y;
+          const distanceSq = dx * dx + dy * dy;
+          if (distanceSq <= nearestDistanceSq) {
+            nearest = egg;
+            nearestDistanceSq = distanceSq;
+          }
+        }
+      }
+      return nearest;
+    }
+
+    function collectNearbyEgg() {
+      const egg = getNearestEgg();
+      if (!egg) return;
+      if (!addInventoryItem("egg", 1)) {
+        showMessage("Your inventory is full!");
+        return;
+      }
+      collectedEggs.add(egg.key);
+      saveGame();
+      showMessage("Found a Mystery Egg! +1");
+    }
+
+    // Little 16x16 pixel egg: no extra texture file needed.
+    function drawEggIcon(x, y, scale = 1) {
+      const pixel = (px, py, w, h, color) => {
+        ctx.fillStyle = color;
+        ctx.fillRect(
+          Math.round(x + px * scale), Math.round(y + py * scale),
+          Math.ceil(w * scale), Math.ceil(h * scale)
+        );
+      };
+      pixel(5, 1, 6, 1, "#5c4b40");
+      pixel(3, 2, 10, 2, "#5c4b40");
+      pixel(2, 4, 12, 8, "#5c4b40");
+      pixel(3, 12, 10, 2, "#5c4b40");
+      pixel(5, 14, 6, 1, "#5c4b40");
+      pixel(5, 2, 6, 1, "#fff8db");
+      pixel(4, 3, 8, 1, "#fff8db");
+      pixel(3, 4, 10, 7, "#f3dfad");
+      pixel(3, 5, 3, 5, "#fff5d3");
+      pixel(4, 11, 8, 2, "#e7ca94");
+      pixel(5, 13, 6, 1, "#d8b681");
+      pixel(6, 5, 3, 2, "#9dbe92");
+      pixel(9, 7, 2, 3, "#9dbe92");
+      pixel(5, 9, 3, 2, "#b0cba2");
+      pixel(4, 4, 2, 3, "#fffbed");
+    }
+
+    function drawEggs(cameraX, cameraY) {
+      const left = Math.floor(cameraX / TILE_SIZE) - 1;
+      const top = Math.floor(cameraY / TILE_SIZE) - 1;
+      const right = Math.floor((cameraX + canvas.width) / TILE_SIZE) + 1;
+      const bottom = Math.floor((cameraY + canvas.height) / TILE_SIZE) + 1;
+
+      for (let ty = top; ty <= bottom; ty++) {
+        for (let tx = left; tx <= right; tx++) {
+          const egg = getEggAtTile(tx, ty);
+          if (!egg) continue;
+          const x = Math.round(egg.x - cameraX);
+          const y = Math.round(egg.y - cameraY);
+          const bob = Math.round(Math.sin(gameTime * 2.5 + tx) * 1.2);
+
+          ctx.fillStyle = "rgba(36, 59, 34, 0.32)";
+          ctx.fillRect(x - 6, y + 6, 12, 3);
+          drawEggIcon(x - 8, y - 10 + bob);
+
+          // A tiny sparkle makes rare eggs easier to notice.
+          const pulse = Math.sin(gameTime * 3 + ty) > 0.5;
+          if (pulse) {
+            ctx.fillStyle = "#fff2a9";
+            ctx.fillRect(x + 9, y - 10 + bob, 2, 2);
+            ctx.fillRect(x + 10, y - 12 + bob, 1, 1);
+          }
+        }
+      }
+    }
+
+    // ============================================================
+    // PLAYER SPRITES
     // ============================================================
     function getPlayerSprite() {
       let sprites;
-
-      // Forward-facing sprites depend on last left/right key.
       if (player.facing === "down") {
         sprites = player.forwardSide === "right"
           ? playerSprites.downRight
           : playerSprites.downLeft;
       } else {
-        sprites =
-          playerSprites[player.facing] ||
-          playerSprites.downLeft;
+        sprites = playerSprites[player.facing] || playerSprites.downLeft;
       }
 
-      // Idle or walking
       const preferred = player.moving
         ? sprites.walking[player.walkFrame]
         : sprites.idle;
-
-      // Prevent missing right-facing PNGs from
-      // making the player disappear.
-      if (
-        player.facing === "down" &&
-        !imageReady(preferred)
-      ) {
+      if (player.facing === "down" && !imageReady(preferred)) {
         return player.moving
           ? playerSprites.downLeft.walking[player.walkFrame]
           : playerSprites.downLeft.idle;
       }
-
       return preferred;
     }
 
-    // ============================================================
-    // DRAW PLAYER
-    // ============================================================
     function drawPlayer(screenX, screenY) {
       const size = PLAYER_SPRITE_SIZE;
-
-      const px = Math.floor(
-        screenX - size / 2
-      );
-
-      const py = Math.floor(
-        screenY - size + 4
-      );
-
+      const px = Math.floor(screenX - size / 2);
+      const py = Math.floor(screenY - size + 4);
       const sprite = getPlayerSprite();
+      if (imageReady(sprite)) ctx.drawImage(sprite, px, py, size, size);
+    }
 
-      if (imageReady(sprite)) {
-        ctx.drawImage(
-          sprite,
-          px,
-          py,
-          size,
-          size
-        );
+    // ============================================================
+    // INVENTORY AND HUD
+    // ============================================================
+    function drawText(text, x, y, color = "#fff", align = "left", size = 9) {
+      ctx.textAlign = align;
+      ctx.textBaseline = "top";
+      ctx.font = `bold ${size}px monospace`;
+      ctx.fillStyle = "#263224";
+      ctx.fillText(text, Math.round(x) + 1, Math.round(y) + 1);
+      ctx.fillStyle = color;
+      ctx.fillText(text, Math.round(x), Math.round(y));
+      ctx.textAlign = "left";
+    }
+
+    function inventoryLayout() {
+      const slotSize = Math.min(27, Math.max(16, Math.floor((canvas.height - 85) / 4)));
+      const gap = 4;
+      const gridW = slotSize * 6 + gap * 5;
+      const gridH = slotSize * 4 + gap * 3;
+      const width = gridW + 28;
+      const height = gridH + 65;
+      const x = Math.floor((canvas.width - width) / 2);
+      const y = Math.floor((canvas.height - height) / 2);
+      return { x, y, width, height, slotSize, gap, gridW, gridH,
+        startX: x + 14, startY: y + 34 };
+    }
+
+    function drawInventory() {
+      const ui = inventoryLayout();
+      ctx.fillStyle = "rgba(11, 22, 14, 0.6)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#242d26";
+      ctx.fillRect(ui.x - 2, ui.y - 2, ui.width + 4, ui.height + 4);
+      ctx.fillStyle = "#d5c59f";
+      ctx.fillRect(ui.x, ui.y, ui.width, ui.height);
+      ctx.fillStyle = "#ede0b9";
+      ctx.fillRect(ui.x + 4, ui.y + 4, ui.width - 8, ui.height - 8);
+      ctx.fillStyle = "#71835b";
+      ctx.fillRect(ui.x + 6, ui.y + 6, ui.width - 12, 21);
+      drawText("INVENTORY", ui.x + 13, ui.y + 12, "#fff6d6", "left", 10);
+      drawText("I / ESC", ui.x + ui.width - 12, ui.y + 13, "#f5e5c2", "right", 8);
+
+      for (let i = 0; i < INVENTORY_SLOTS; i++) {
+        const col = i % 6;
+        const row = Math.floor(i / 6);
+        const sx = ui.startX + col * (ui.slotSize + ui.gap);
+        const sy = ui.startY + row * (ui.slotSize + ui.gap);
+        ctx.fillStyle = i === selectedSlot ? "#d8b25b" : "#736e5e";
+        ctx.fillRect(sx - 1, sy - 1, ui.slotSize + 2, ui.slotSize + 2);
+        ctx.fillStyle = i === selectedSlot ? "#fff0b9" : "#acaa91";
+        ctx.fillRect(sx + 1, sy + 1, ui.slotSize - 2, ui.slotSize - 2);
+
+        const item = inventory[i];
+        if (!item) continue;
+        if (item.type === "egg") {
+          const scale = Math.min(1, (ui.slotSize - 5) / 16);
+          drawEggIcon(
+            sx + Math.floor((ui.slotSize - 16 * scale) / 2),
+            sy + Math.floor((ui.slotSize - 16 * scale) / 2) - 1,
+            scale
+          );
+        }
+        if (item.count > 1) {
+          drawText(String(item.count), sx + ui.slotSize - 2,
+            sy + ui.slotSize - 10, "#fff", "right", 8);
+        }
+      }
+
+      const selected = inventory[selectedSlot];
+      const detail = selected && selected.type === "egg"
+        ? `Mystery Egg x${selected.count}`
+        : `Mystery Eggs: ${countItems("egg")}`;
+      drawText(detail, ui.x + 14, ui.y + ui.height - 22, "#3c4a33", "left", 9);
+    }
+
+    function drawHUD() {
+      ctx.fillStyle = "rgba(34, 48, 31, 0.78)";
+      ctx.fillRect(7, 7, 115, 31);
+      drawText("I  Inventory", 13, 12, "#f8eed4");
+      drawText(`Eggs: ${countItems("egg")}`, 13, 24, "#fff0b7");
+
+      const nearbyEgg = inventoryOpen ? null : getNearestEgg();
+      if (nearbyEgg) {
+        const text = "[E] Collect Mystery Egg";
+        ctx.font = "bold 9px monospace";
+        const width = Math.ceil(ctx.measureText(text).width) + 18;
+        const x = Math.floor((canvas.width - width) / 2);
+        const y = canvas.height - 33;
+        ctx.fillStyle = "rgba(32, 42, 28, 0.88)";
+        ctx.fillRect(x, y, width, 19);
+        drawText(text, canvas.width / 2, y + 5, "#fff1c5", "center");
+      }
+
+      if (notificationTime > 0) {
+        const text = notification;
+        ctx.font = "bold 9px monospace";
+        const width = Math.ceil(ctx.measureText(text).width) + 18;
+        const x = Math.floor((canvas.width - width) / 2);
+        ctx.fillStyle = "rgba(27, 52, 33, 0.9)";
+        ctx.fillRect(x, 11, width, 20);
+        drawText(text, canvas.width / 2, 16, "#ffefba", "center");
       }
     }
 
     // ============================================================
-    // UPDATE
+    // UPDATE - PRESERVES YOUR SIDE/DIAGONAL ANIMATIONS
     // ============================================================
     function update(dt) {
-      const inputX =
-        Number(
-          keys.has("KeyD") ||
-          keys.has("ArrowRight")
-        ) -
-        Number(
-          keys.has("KeyA") ||
-          keys.has("ArrowLeft")
-        );
+      gameTime += dt;
+      if (notificationTime > 0) notificationTime -= dt;
+      if (inventoryOpen) {
+        player.moving = false;
+        player.walkDistance = 0;
+        player.walkFrame = 0;
+        return;
+      }
 
-      const inputY =
-        Number(
-          keys.has("KeyS") ||
-          keys.has("ArrowDown")
-        ) -
-        Number(
-          keys.has("KeyW") ||
-          keys.has("ArrowUp")
-        );
+      const inputX = Number(keys.has("KeyD") || keys.has("ArrowRight")) -
+                     Number(keys.has("KeyA") || keys.has("ArrowLeft"));
+      const inputY = Number(keys.has("KeyS") || keys.has("ArrowDown")) -
+                     Number(keys.has("KeyW") || keys.has("ArrowUp"));
 
-      // No movement input
       if (inputX === 0 && inputY === 0) {
         player.moving = false;
         player.walkDistance = 0;
@@ -565,59 +603,27 @@
       }
 
       const length = Math.hypot(inputX, inputY);
-
       const dx = inputX / length;
       const dy = inputY / length;
-
-      const speed = keys.has("ShiftLeft")
-        ? SPRINT_SPEED
-        : WALK_SPEED;
-
+      const speed = keys.has("ShiftLeft") ? SPRINT_SPEED : WALK_SPEED;
       const moveX = dx * speed * dt;
       const moveY = dy * speed * dt;
-
       const previousX = player.x;
       const previousY = player.y;
 
-      // Horizontal collision
-      if (canMoveTo(player.x + moveX, player.y)) {
-        player.x += moveX;
-      }
+      if (canMoveTo(player.x + moveX, player.y)) player.x += moveX;
+      if (canMoveTo(player.x, player.y + moveY)) player.y += moveY;
 
-      // Vertical collision
-      if (canMoveTo(player.x, player.y + moveY)) {
-        player.y += moveY;
-      }
+      // Vertical takes priority on diagonals, as in your current game.
+      if (inputY !== 0) player.facing = inputY > 0 ? "down" : "up";
+      else player.facing = inputX > 0 ? "right" : "left";
 
-      // ============================================================
-      // FACING DIRECTION
-      // ============================================================
-
-      // Vertical movement takes priority for diagonals.
-      // Down + Right = forward-right sprites
-      // Down + Left  = forward-left sprites
-      // Up + Right/Left = backward sprites
-      // Only horizontal = sideways sprites
-
-      if (inputY !== 0) {
-        player.facing = inputY > 0 ? "down" : "up";
-      } else {
-        player.facing = inputX > 0 ? "right" : "left";
-      }
-
-      // ============================================================
-      // WALKING ANIMATION
-      // ============================================================
       const distanceMoved = Math.hypot(
-        player.x - previousX,
-        player.y - previousY
+        player.x - previousX, player.y - previousY
       );
-
       player.moving = distanceMoved > 0.0001;
-
       if (player.moving) {
         player.walkDistance += distanceMoved;
-
         player.walkFrame = Math.floor(
           player.walkDistance / WALK_FRAME_DISTANCE
         ) % 2;
@@ -631,95 +637,94 @@
     // DRAW
     // ============================================================
     function draw() {
-      const cameraX = Math.round(
-        player.x - canvas.width / 2
-      );
-
-      const cameraY = Math.round(
-        player.y - canvas.height / 2
-      );
-
-      // Grass
+      const cameraX = Math.round(player.x - canvas.width / 2);
+      const cameraY = Math.round(player.y - canvas.height / 2);
       drawGround(cameraX, cameraY);
-
-      // Plots and pedestals behind player
       drawPlots(cameraX, cameraY, false);
-
-      // Player remains centered
-      drawPlayer(
-        Math.floor(canvas.width / 2),
-        Math.floor(canvas.height / 2)
-      );
-
-      // Pedestals in front of player
+      drawEggs(cameraX, cameraY);
+      drawPlayer(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2));
       drawPlots(cameraX, cameraY, true);
+      drawHUD();
+      if (inventoryOpen) drawInventory();
     }
 
     // ============================================================
     // GAME LOOP
     // ============================================================
     let lastTime = performance.now();
-
     function gameLoop(now) {
-      const dt = Math.min(
-        (now - lastTime) / 1000,
-        0.05
-      );
-
+      const dt = Math.min((now - lastTime) / 1000, 0.05);
       lastTime = now;
-
       update(dt);
       draw();
-
       requestAnimationFrame(gameLoop);
     }
-
     requestAnimationFrame(gameLoop);
 
     // ============================================================
     // CONTROLS
     // ============================================================
     window.addEventListener("keydown", (event) => {
-      if (
-        [
-          "ArrowUp",
-          "ArrowDown",
-          "ArrowLeft",
-          "ArrowRight",
-          "Space"
-        ].includes(event.code)
-      ) {
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(event.code)) {
         event.preventDefault();
       }
 
-      // Remember the last horizontal direction.
-      // Only update when a key is first pressed.
+      if (event.code === "KeyI" || event.code === "Escape") {
+        event.preventDefault();
+        if (!event.repeat) {
+          if (event.code === "KeyI") inventoryOpen = !inventoryOpen;
+          else inventoryOpen = false;
+          keys.clear();
+          player.moving = false;
+          player.walkDistance = 0;
+          player.walkFrame = 0;
+        }
+        return;
+      }
+
+      if (inventoryOpen) return;
+
+      if (event.code === "KeyE") {
+        event.preventDefault();
+        if (!event.repeat) collectNearbyEgg();
+        return;
+      }
+
       if (!keys.has(event.code)) {
-        if (
-          event.code === "KeyD" ||
-          event.code === "ArrowRight"
-        ) {
+        if (event.code === "KeyD" || event.code === "ArrowRight") {
           player.forwardSide = "right";
-        } else if (
-          event.code === "KeyA" ||
-          event.code === "ArrowLeft"
-        ) {
+        } else if (event.code === "KeyA" || event.code === "ArrowLeft") {
           player.forwardSide = "left";
         }
       }
-
       keys.add(event.code);
     });
 
-    window.addEventListener("keyup", (event) => {
-      keys.delete(event.code);
-    });
-
+    window.addEventListener("keyup", (event) => keys.delete(event.code));
     window.addEventListener("blur", () => {
       keys.clear();
       player.moving = false;
       player.walkDistance = 0;
       player.walkFrame = 0;
+    });
+
+    // Click an inventory slot to inspect the item.
+    canvas.addEventListener("click", (event) => {
+      if (!inventoryOpen) return;
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = (event.clientX - rect.left) * canvas.width / rect.width;
+      const mouseY = (event.clientY - rect.top) * canvas.height / rect.height;
+      const ui = inventoryLayout();
+      selectedSlot = -1;
+      for (let i = 0; i < INVENTORY_SLOTS; i++) {
+        const sx = ui.startX + (i % 6) * (ui.slotSize + ui.gap);
+        const sy = ui.startY + Math.floor(i / 6) * (ui.slotSize + ui.gap);
+        if (mouseX >= sx && mouseX < sx + ui.slotSize &&
+            mouseY >= sy && mouseY < sy + ui.slotSize) {
+          selectedSlot = i;
+          break;
+        }
+      }
     });
   </script>
 </body>
