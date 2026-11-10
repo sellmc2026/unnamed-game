@@ -295,10 +295,39 @@
     const SAVE_KEY = "pixelPetGame.inventory.v2";
     const LEGACY_SAVE_KEY = "pixelPetGame.eggsAndInventory.v1";
 
-    // ============================================================
+    // Object drop-shadow
+    function drawShadow(ctx, x, y, width, height, options = {}) {
+        const {
+            enabled = true,
+            opacity = 0.25,
+            scale = 0.7,
+            offsetY = -2
+        } = options;
+    
+        if (!enabled) return;
+    
+        ctx.save();
+    
+        ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
+    
+        ctx.beginPath();
+        ctx.ellipse(
+            x + width / 2,
+            y + height + offsetY,
+            width * scale / 2,
+            Math.max(1, height * 0.12),
+            0,
+            0,
+            Math.PI * 2
+        );
+        ctx.fill();
+    
+        ctx.restore();
+    }
+
     // ITEM DEFINITIONS
-    // Add other items here as the game grows.
-    // ============================================================
+    // Add other items here as the game grows
+    
     const ITEM_DEFINITIONS = {
       "basic-egg": {
         name: "Basic Egg",
@@ -342,6 +371,7 @@
       moving: false,
       walkDistance: 0,
       walkFrame: 0
+      shadow: true
     };
 
     // ============================================================
