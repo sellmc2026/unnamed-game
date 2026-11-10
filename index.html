@@ -1149,8 +1149,12 @@
             Math.sin(gameTime * 2.5 + tx) * 1.2
           );
 
-          ctx.fillStyle = "rgba(36, 59, 34, 0.32)";
-          ctx.fillRect(x - 6, y + 6, 12, 3);
+          drawShadow(ctx, x - 8, y - 10, 16, 16, {
+              enabled: true,
+              opacity: 0.25,
+              scale: 0.75,
+              offsetY: 2
+          });
 
           if (imageReady(basicEggTexture)) {
             ctx.drawImage(
@@ -1221,6 +1225,13 @@
       );
 
       const sprite = getPlayerSprite();
+
+      drawShadow(ctx, px, py, size, size, {
+          enabled: player.shadow,
+          opacity: 0.25,
+          scale: 0.5,
+          offsetY: -3
+      });
 
       if (imageReady(sprite)) {
         ctx.drawImage(
