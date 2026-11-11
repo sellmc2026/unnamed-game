@@ -752,50 +752,82 @@
       "characters/male/male-right-walking-2.png"
     );
 
+    const maleDownRunning1 = loadImage(
+      "characters/male/male-forward-running-1.png"
+    );
+
+    const maleDownRunning2 = loadImage(
+      "characters/male/male-forward-running-2.png"
+    );
+
+    const maleDownRunningRight1 = loadImage(
+      "characters/male/male-forward-running-right-1.png"
+    );
+
+    const maleDownRunningRight2 = loadImage(
+      "characters/male/male-forward-running-right-2.png"
+    );
+
+    const maleUpRunning1 = loadImage(
+      "characters/male/male-backward-running-1.png"
+    );
+
+    const maleUpRunning2 = loadImage(
+      "characters/male/male-backward-running-2.png"
+    );
+
+    const maleRunningRight1 = loadImage(
+      "characters/male/male-right-running-1.png"
+    );
+
+    const maleRunningRight2 = loadImage(
+      "characters/male/male-right-running-2.png"
+    );
+
+    const maleRunningLeft1 = loadImage(
+      "characters/male/male-left-running-1.png"
+    );
+
+    const maleRunningLeft2 = loadImage(
+      "characters/male/male-left-running-1.png"
+    );
+
     // ============================================================
     // SPRITE GROUPS
     // ============================================================
+    
     const playerSprites = {
-      downLeft: {
-        idle: maleIdleDown,
-        walking: [
-          maleWalkingDown1,
-          maleWalkingDown2
-        ]
-      },
-
-      downRight: {
-        idle: maleIdleDownRight,
-        walking: [
-          maleWalkingDownRight1,
-          maleWalkingDownRight2
-        ]
-      },
-
-      up: {
-        idle: maleIdleUp,
-        walking: [
-          maleWalkingUp1,
-          maleWalkingUp2
-        ]
-      },
-
-      left: {
-        idle: maleIdleLeft,
-        walking: [
-          maleWalkingLeft1,
-          maleWalkingLeft2
-        ]
-      },
-
-      right: {
-        idle: maleIdleRight,
-        walking: [
-          maleWalkingRight1,
-          maleWalkingRight2
-        ]
-      }
+        downLeft: {
+            idle: maleIdleDown,
+            walking: [maleWalkingDown1, maleWalkingDown2],
+            running: [maleDownRunning1, maleDownRunning2]
+        },
+    
+        downRight: {
+            idle: maleIdleDownRight,
+            walking: [maleWalkingDownRight1, maleWalkingDownRight2],
+            running: [maleDownRunningRight1, maleDownRunningRight2]
+        },
+    
+        up: {
+            idle: maleIdleUp,
+            walking: [maleWalkingUp1, maleWalkingUp2],
+            running: [maleUpRunning1, maleUpRunning2]
+        },
+    
+        left: {
+            idle: maleIdleLeft,
+            walking: [maleWalkingLeft1, maleWalkingLeft2],
+            running: [maleRunningLeft1, maleRunningLeft2]
+        },
+    
+        right: {
+            idle: maleIdleRight,
+            walking: [maleWalkingRight1, maleWalkingRight2],
+            running: [maleRunningRight1, maleRunningRight2]
+        }
     };
+
 
     // ============================================================
     // RESIZE
@@ -1182,34 +1214,37 @@
     // ============================================================
     // PLAYER SPRITE SELECTION
     // ============================================================
+    
     function getPlayerSprite() {
-      let sprites;
-
-      if (player.facing === "down") {
-        sprites = player.forwardSide === "right"
-          ? playerSprites.downRight
-          : playerSprites.downLeft;
-      } else {
-        sprites =
-          playerSprites[player.facing] ||
-          playerSprites.downLeft;
-      }
-
-      const preferred = player.moving
-        ? sprites.walking[player.walkFrame]
-        : sprites.idle;
-
-      if (
-        player.facing === "down" &&
-        !imageReady(preferred)
-      ) {
-        return player.moving
-          ? playerSprites.downLeft.walking[player.walkFrame]
-          : playerSprites.downLeft.idle;
-      }
-
-      return preferred;
+        let direction = player.facing;
+    
+        if (direction === "down") {
+            direction = player.forwardSide === "right"
+                ? "downRight"
+                : "downLeft";
+        }
+    
+        const sprites = playerSprites[direction] || playerSprites.downLeft;
+    
+        const running = keys.has("ShiftLeft") || keys.has("ShiftRight");
+    
+        let preferred;
+    
+        if (!player.moving) {
+            preferred = sprites.idle;
+        } else if (running) {
+            preferred = sprites.running[player.walkFrame];
+        } else {
+            preferred = sprites.walking[player.walkFrame];
+        }
+    
+        if (!imageReady(preferred)) {
+            preferred = sprites.walking[player.walkFrame] || sprites.idle;
+        }
+    
+        return preferred;
     }
+
 
     // ============================================================
     // DRAW PLAYER
@@ -1318,6 +1353,10 @@
 
       const previousX = player.x;
       const previousY = player.y;
+
+
+      if (speed === true) {
+        getPlayerSprite()
 
       if (canMoveTo(player.x + moveX, player.y)) {
         player.x += moveX;
