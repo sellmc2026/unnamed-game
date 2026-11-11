@@ -1529,10 +1529,30 @@
 
     requestAnimationFrame(gameLoop);
 
+    // PUNCH A TREE 
+    function punchTree(tree) {
+      for (let i = 0; i < 3; i++) {
+        tree.y += 5;
+        setTimeout(() => {
+          tree.y -= 5;
+        }, 200);
+      };  
+
+    }
+
     // ============================================================
     // CONTROLS
     // ============================================================
     window.addEventListener("keydown", (event) => {
+      if (event.code === "Enter") {
+        const tree = getNearestTree();
+    
+        if (tree) {
+            punchTree(tree);
+        }
+    }
+        
+      
       if (
         [
           "ArrowUp",
@@ -1604,6 +1624,33 @@
       player.walkDistance = 0;
       player.walkFrame = 0;
     });
+
+    function getNearestTree() {
+      let nearest = null;
+      let nearestDistanceSq =
+          TREE_PUNCH_DISTANCE * TREE_PUNCH_DISTANCE;
+  
+      const trees = getTreesInBounds(
+          player.x - TREE_PUNCH_DISTANCE,
+          player.y - TREE_PUNCH_DISTANCE,
+          player.x + TREE_PUNCH_DISTANCE,
+          player.y + TREE_PUNCH_DISTANCE
+      );
+  
+      for (const tree of trees) {
+          const dx = tree.x - player.x;
+          const dy = tree.y - player.y;
+  
+          const distanceSq = dx * dx + dy * dy;
+  
+          if (distanceSq <= nearestDistanceSq) {
+              nearest = tree;
+              nearestDistanceSq = distanceSq;
+          }
+      }
+  
+      return nearest;
+  }
   </script>
 </body>
 </html>
