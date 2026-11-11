@@ -266,7 +266,7 @@
     const PLOT_PADDING = 1;
     const PLOT_GAP = 9;
     const PLOT_COLOR = "#d3d3d3";
-    const PEDESTAL_SCALE = 1.5;
+    const PEDESTAL_SCALE = 2;
     const PEDESTAL_HITBOX_HEIGHT = 6;
     const PEDESTAL_STEP = PEDESTAL_GAP + 1;
 
@@ -294,7 +294,7 @@
     // Deterministic wilderness trees: roughly one per 140 grass tiles.
     const TREE_CELL_TILES = 8;
     const TREE_CHANCE_PERCENT = 45;
-    const TREE_SIZE = 32;
+    const TREE_SIZE = 64;
     const TREE_TRUNK_HALF_WIDTH = 4;
     const TREE_TRUNK_DEPTH = 5;
 
@@ -1124,7 +1124,7 @@
       const x = Math.round(tree.x - cameraX);
       const y = Math.round(tree.y - cameraY);
       drawShadow(ctx, x - 7, y - 5, 14, 5, {
-        opacity: 0.23, scale: 1, offsetY: 0
+        opacity: 0.23, scale: 4, offsetY: 1
       });
       ctx.drawImage(treeTexture, x - TREE_SIZE / 2,
         y - TREE_SIZE, TREE_SIZE, TREE_SIZE);
