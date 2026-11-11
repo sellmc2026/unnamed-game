@@ -1530,14 +1530,16 @@
     requestAnimationFrame(gameLoop);
 
     // PUNCH A TREE 
-    function punchTree(tree) {
-      for (let i = 0; i < 3; i++) {
-        tree.y += 5;
-        setTimeout(() => {
-          tree.y -= 5;
-        }, 200);
-      };  
-
+    async function punchTree(tree) {
+        for (let i = 0; i < 3; i++) {
+            tree.y += 5;
+    
+            await new Promise(resolve => setTimeout(resolve, 200));
+    
+            tree.y -= 5;
+    
+            await new Promise(resolve => setTimeout(resolve, 200));
+        }
     }
 
     // ============================================================
