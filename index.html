@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -255,13 +256,9 @@
     // SETTINGS
     // ============================================================
 
-
     // DEVELOPER MODE STUFF
-    let developerMode = false
+    let developerMode = false;
 
-
-
-    
     const TILE_SIZE = 16;
     const PIXEL_SCALE = 3;
     const WALK_SPEED = 70;
@@ -300,8 +297,8 @@
     const EGG_RARITY = 1200;
     const EGG_PICKUP_DISTANCE = 25;
 
-    // Deterministic wilderness trees: roughly one per 140 grass tiles.
-    const TREE_PUNCH_DISTANCE = 32;
+    // TREE SETTINGS
+    const TREE_PUNCH_DISTANCE = 30;
     const TREE_CELL_TILES = 8;
     const TREE_CHANCE_PERCENT = 45;
     const TREE_SIZE = 64;
@@ -314,38 +311,35 @@
 
     // Object drop-shadow
     function drawShadow(ctx, x, y, width, height, options = {}) {
-        const {
-            enabled = true,
-            opacity = 0.25,
-            scale = 0.7,
-            offsetX = -1,
-            offsetY = -2
-        } = options;
-    
-        if (!enabled) return;
-    
-        ctx.save();
-    
-        ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
-    
-        ctx.beginPath();
-        ctx.ellipse(
-            x + width / 2,
-            y + height + offsetY,
-            width * scale / 2,
-            Math.max(1, height * 0.12),
-            0,
-            0,
-            Math.PI * 2
-        );
-        ctx.fill();
-    
-        ctx.restore();
+      const {
+        enabled = true,
+        opacity = 0.25,
+        scale = 0.7,
+        offsetX = -1,
+        offsetY = -2
+      } = options;
+
+      if (!enabled) return;
+
+      ctx.save();
+      ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
+      ctx.beginPath();
+      ctx.ellipse(
+        x + width / 2,
+        y + height + offsetY,
+        width * scale / 2,
+        Math.max(1, height * 0.12),
+        0,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+      ctx.restore();
     }
 
+    // ============================================================
     // ITEM DEFINITIONS
-    // Add other items here as the game grows
-    
+    // ============================================================
     const ITEM_DEFINITIONS = {
       "basic-egg": {
         name: "Basic Egg",
@@ -814,39 +808,37 @@
     // ============================================================
     // SPRITE GROUPS
     // ============================================================
-    
     const playerSprites = {
-        downLeft: {
-            idle: maleIdleDown,
-            walking: [maleWalkingDown1, maleWalkingDown2],
-            running: [maleDownRunning1, maleDownRunning2]
-        },
-    
-        downRight: {
-            idle: maleIdleDownRight,
-            walking: [maleWalkingDownRight1, maleWalkingDownRight2],
-            running: [maleDownRunningRight1, maleDownRunningRight2]
-        },
-    
-        up: {
-            idle: maleIdleUp,
-            walking: [maleWalkingUp1, maleWalkingUp2],
-            running: [maleUpRunning1, maleUpRunning2]
-        },
-    
-        left: {
-            idle: maleIdleLeft,
-            walking: [maleWalkingLeft1, maleWalkingLeft2],
-            running: [maleRunningLeft1, maleRunningLeft2]
-        },
-    
-        right: {
-            idle: maleIdleRight,
-            walking: [maleWalkingRight1, maleWalkingRight2],
-            running: [maleRunningRight1, maleRunningRight2]
-        }
-    };
+      downLeft: {
+        idle: maleIdleDown,
+        walking: [maleWalkingDown1, maleWalkingDown2],
+        running: [maleDownRunning1, maleDownRunning2]
+      },
 
+      downRight: {
+        idle: maleIdleDownRight,
+        walking: [maleWalkingDownRight1, maleWalkingDownRight2],
+        running: [maleDownRunningRight1, maleDownRunningRight2]
+      },
+
+      up: {
+        idle: maleIdleUp,
+        walking: [maleWalkingUp1, maleWalkingUp2],
+        running: [maleUpRunning1, maleUpRunning2]
+      },
+
+      left: {
+        idle: maleIdleLeft,
+        walking: [maleWalkingLeft1, maleWalkingLeft2],
+        running: [maleRunningLeft1, maleRunningLeft2]
+      },
+
+      right: {
+        idle: maleIdleRight,
+        walking: [maleWalkingRight1, maleWalkingRight2],
+        running: [maleRunningRight1, maleRunningRight2]
+      }
+    };
 
     // ============================================================
     // RESIZE
@@ -1075,14 +1067,25 @@
       );
     }
 
-    // Each 8x8-tile wilderness cell can hold at most one tree.
-    // Positions depend on hash(), so trees stay put across reloads.
+    // ============================================================
+    // TREES
+    // ============================================================
+    // Cache trees so their animation state persists between frames.
+    const treeCache = new Map();
+
     function getTreeInCell(cx, cy) {
+      const key = `${cx},${cy}`;
+
+      if (treeCache.has(key)) {
+        return treeCache.get(key);
+      }
+
       const seed = hash(cx + 17031, cy - 90217);
       if (seed % 100 >= TREE_CHANCE_PERCENT) return null;
 
       const tx = cx * TREE_CELL_TILES + 1 +
         (hash(cx + 317, cy + 991) % (TREE_CELL_TILES - 2));
+
       const ty = cy * TREE_CELL_TILES + 1 +
         (hash(cx - 733, cy + 1441) % (TREE_CELL_TILES - 2));
 
@@ -1091,24 +1094,50 @@
 
       // Leave plots and their immediate surroundings empty.
       if (isNearPlot(x, y, TREE_SIZE / 2 + 6)) return null;
-      // Do not obstruct the initial player spawn.
+
+      // Do not obstruct initial spawn.
       if (Math.hypot(x + 16, y + 16) < 48) return null;
 
-      return { x, y };
+      const tree = {
+        x,
+        y,
+        shakeOffsetY: 0,
+        punching: false
+      };
+
+      treeCache.set(key, tree);
+
+      return tree;
     }
 
     function getTreesInBounds(left, top, right, bottom) {
       const cellSize = TREE_CELL_TILES * TILE_SIZE;
       const trees = [];
-      for (let cy = Math.floor(top / cellSize);
-           cy <= Math.floor(bottom / cellSize); cy++) {
-        for (let cx = Math.floor(left / cellSize);
-             cx <= Math.floor(right / cellSize); cx++) {
+
+      for (
+        let cy = Math.floor(top / cellSize);
+        cy <= Math.floor(bottom / cellSize);
+        cy++
+      ) {
+        for (
+          let cx = Math.floor(left / cellSize);
+          cx <= Math.floor(right / cellSize);
+          cx++
+        ) {
           const tree = getTreeInCell(cx, cy);
-          if (tree && tree.x >= left && tree.x <= right &&
-              tree.y >= top && tree.y <= bottom) trees.push(tree);
+
+          if (
+            tree &&
+            tree.x >= left &&
+            tree.x <= right &&
+            tree.y >= top &&
+            tree.y <= bottom
+          ) {
+            trees.push(tree);
+          }
         }
       }
+
       return trees;
     }
 
@@ -1116,28 +1145,48 @@
       const cellSize = TREE_CELL_TILES * TILE_SIZE;
       const cx = Math.floor(x / cellSize);
       const cy = Math.floor(y / cellSize);
-      // Neighboring cells are checked so collision works at boundaries.
+
+      // Check neighboring cells as well.
       for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
           const tree = getTreeInCell(cx + dx, cy + dy);
+
           if (!tree) continue;
-          if (Math.abs(x - tree.x) <= TREE_TRUNK_HALF_WIDTH &&
-              y >= tree.y - TREE_TRUNK_DEPTH &&
-              y <= tree.y) return true;
+
+          if (
+            Math.abs(x - tree.x) <= TREE_TRUNK_HALF_WIDTH &&
+            y >= tree.y - TREE_TRUNK_DEPTH &&
+            y <= tree.y
+          ) {
+            return true;
+          }
         }
       }
+
       return false;
     }
 
     function drawTree(tree, cameraX, cameraY) {
       if (!imageReady(treeTexture)) return;
+
       const x = Math.round(tree.x - cameraX);
       const y = Math.round(tree.y - cameraY);
+
       drawShadow(ctx, x - 7, y - 5, 14, 5, {
-        opacity: 0.23, scale: 4, offsetY: 1
+        opacity: 0.23,
+        scale: 4,
+        offsetY: 1
       });
-      ctx.drawImage(treeTexture, x - TREE_SIZE / 2,
-        y - TREE_SIZE, TREE_SIZE, TREE_SIZE);
+
+      // Only move the rendered tree during a punch.
+      // Its real coordinates and hitbox remain unchanged.
+      ctx.drawImage(
+        treeTexture,
+        x - TREE_SIZE / 2,
+        y - TREE_SIZE + tree.shakeOffsetY,
+        TREE_SIZE,
+        TREE_SIZE
+      );
     }
 
     function canMoveTo(x, y) {
@@ -1147,11 +1196,15 @@
       return !(
         isPositionSolid(x - halfW, y - halfH) ||
         isTreeSolid(x - halfW, y - halfH) ||
+
         isPositionSolid(x + halfW, y - halfH) ||
         isTreeSolid(x + halfW, y - halfH) ||
+
         isPositionSolid(x - halfW, y + halfH) ||
         isTreeSolid(x - halfW, y + halfH) ||
-        isPositionSolid(x + halfW, y + halfH)
+
+        isPositionSolid(x + halfW, y + halfH) ||
+        isTreeSolid(x + halfW, y + halfH)
       );
     }
 
@@ -1216,6 +1269,7 @@
 
           const dx = egg.x - player.x;
           const dy = egg.y - player.y;
+
           const distanceSq = dx * dx + dy * dy;
 
           if (distanceSq <= nearestDistanceSq) {
@@ -1270,10 +1324,10 @@
           );
 
           drawShadow(ctx, x - 8, y - 10, 16, 16, {
-              enabled: true,
-              opacity: 0.25,
-              scale: 0.75,
-              offsetY: 2
+            enabled: true,
+            opacity: 0.25,
+            scale: 0.75,
+            offsetY: 2
           });
 
           if (imageReady(basicEggTexture)) {
@@ -1301,37 +1355,38 @@
     // ============================================================
     // PLAYER SPRITE SELECTION
     // ============================================================
-    
     function getPlayerSprite() {
-        let direction = player.facing;
-    
-        if (direction === "down") {
-            direction = player.forwardSide === "right"
-                ? "downRight"
-                : "downLeft";
-        }
-    
-        const sprites = playerSprites[direction] || playerSprites.downLeft;
-    
-        const running = keys.has("ShiftLeft") || keys.has("ShiftRight");
-    
-        let preferred;
-    
-        if (!player.moving) {
-            preferred = sprites.idle;
-        } else if (running) {
-            preferred = sprites.running[player.walkFrame];
-        } else {
-            preferred = sprites.walking[player.walkFrame];
-        }
-    
-        if (!imageReady(preferred)) {
-            preferred = sprites.walking[player.walkFrame] || sprites.idle;
-        }
-    
-        return preferred;
-    }
+      let direction = player.facing;
 
+      if (direction === "down") {
+        direction = player.forwardSide === "right"
+          ? "downRight"
+          : "downLeft";
+      }
+
+      const sprites =
+        playerSprites[direction] || playerSprites.downLeft;
+
+      const running =
+        keys.has("ShiftLeft") || keys.has("ShiftRight");
+
+      let preferred;
+
+      if (!player.moving) {
+        preferred = sprites.idle;
+      } else if (running) {
+        preferred = sprites.running[player.walkFrame];
+      } else {
+        preferred = sprites.walking[player.walkFrame];
+      }
+
+      if (!imageReady(preferred)) {
+        preferred =
+          sprites.walking[player.walkFrame] || sprites.idle;
+      }
+
+      return preferred;
+    }
 
     // ============================================================
     // DRAW PLAYER
@@ -1350,11 +1405,11 @@
       const sprite = getPlayerSprite();
 
       drawShadow(ctx, px, py, size, size, {
-          enabled: player.shadow,
-          opacity: 0.25,
-          scale: 0.65,
-          offsetX: 0.5,
-          offsetY: -3.5
+        enabled: player.shadow,
+        opacity: 0.25,
+        scale: 0.65,
+        offsetX: 0.5,
+        offsetY: -3.5
       });
 
       if (imageReady(sprite)) {
@@ -1441,8 +1496,6 @@
       const previousX = player.x;
       const previousY = player.y;
 
-
-
       if (canMoveTo(player.x + moveX, player.y)) {
         player.x += moveX;
       }
@@ -1495,15 +1548,18 @@
 
       drawEggs(cameraX, cameraY);
 
-      // Ground-depth sorting: behind a tree it covers the player;
-      // in front of a tree the player covers it.
+      // Ground-depth sorting.
       const trees = getTreesInBounds(
-        cameraX - TREE_SIZE, cameraY - TREE_SIZE,
+        cameraX - TREE_SIZE,
+        cameraY - TREE_SIZE,
         cameraX + canvas.width + TREE_SIZE,
         cameraY + canvas.height + TREE_SIZE
       );
+
       for (const tree of trees) {
-        if (tree.y <= player.y) drawTree(tree, cameraX, cameraY);
+        if (tree.y <= player.y) {
+          drawTree(tree, cameraX, cameraY);
+        }
       }
 
       drawPlayer(
@@ -1512,7 +1568,9 @@
       );
 
       for (const tree of trees) {
-        if (tree.y > player.y) drawTree(tree, cameraX, cameraY);
+        if (tree.y > player.y) {
+          drawTree(tree, cameraX, cameraY);
+        }
       }
 
       drawPlots(cameraX, cameraY, true);
@@ -1540,44 +1598,83 @@
 
     requestAnimationFrame(gameLoop);
 
-    // PUNCH A TREE 
+    // ============================================================
+    // TREE PUNCHING
+    // ============================================================
     async function punchTree(tree) {
+      // Prevent animations from overlapping.
+      if (tree.punching) return;
+
+      tree.punching = true;
+
+      try {
         for (let i = 0; i < 3; i++) {
-            tree.y += 5;
-    
-            await new Promise(resolve => setTimeout(resolve, 200));
-    
-            tree.y -= 5;
-    
-            await new Promise(resolve => setTimeout(resolve, 200));
+          tree.shakeOffsetY = 5;
+
+          await new Promise(resolve =>
+            setTimeout(resolve, 100)
+          );
+
+          tree.shakeOffsetY = 0;
+
+          await new Promise(resolve =>
+            setTimeout(resolve, 100)
+          );
         }
+      } finally {
+        tree.shakeOffsetY = 0;
+        tree.punching = false;
+      }
+    }
+
+    function getNearestTree() {
+      let nearest = null;
+
+      let nearestDistanceSq =
+        TREE_PUNCH_DISTANCE * TREE_PUNCH_DISTANCE;
+
+      const trees = getTreesInBounds(
+        player.x - TREE_PUNCH_DISTANCE,
+        player.y - TREE_PUNCH_DISTANCE,
+        player.x + TREE_PUNCH_DISTANCE,
+        player.y + TREE_PUNCH_DISTANCE
+      );
+
+      for (const tree of trees) {
+        const dx = tree.x - player.x;
+        const dy = tree.y - player.y;
+
+        const distanceSq = dx * dx + dy * dy;
+
+        if (distanceSq <= nearestDistanceSq) {
+          nearest = tree;
+          nearestDistanceSq = distanceSq;
+        }
+      }
+
+      return nearest;
     }
 
     // ============================================================
     // CONTROLS
     // ============================================================
     window.addEventListener("keydown", (event) => {
-      // Toggle Developer Mode with CTRL + O
+      // CTRL + O: Developer Mode
       if (event.ctrlKey && event.code === "KeyO") {
         event.preventDefault();
-      
+
         if (!event.repeat) {
-            developerMode = !developerMode;
-            console.log("Developer Mode:", developerMode ? "ON" : "OFF");
+          developerMode = !developerMode;
+
+          console.log(
+            "Developer Mode:",
+            developerMode ? "ON" : "OFF"
+          );
         }
-      
+
         return;
       }
-      
-      if (event.code === "KeyX") {
-        const tree = getNearestTree();
-    
-        if (tree) {
-            punchTree(tree);
-        }
-      }
-        
-      
+
       if (
         [
           "ArrowUp",
@@ -1590,7 +1687,7 @@
         event.preventDefault();
       }
 
-      // E opens and closes the inventory.
+      // E opens or closes inventory.
       if (
         event.code === "KeyE" ||
         event.code === "Escape"
@@ -1609,6 +1706,21 @@
       }
 
       if (inventoryOpen) return;
+
+      // X punches a nearby tree.
+      if (event.code === "KeyX") {
+        event.preventDefault();
+
+        if (!event.repeat) {
+          const tree = getNearestTree();
+
+          if (tree) {
+            punchTree(tree);
+          }
+        }
+
+        return;
+      }
 
       // C collects a nearby egg.
       if (event.code === "KeyC") {
@@ -1650,117 +1762,99 @@
       player.walkFrame = 0;
     });
 
-    function getNearestTree() {
-      let nearest = null;
-      let nearestDistanceSq =
-          TREE_PUNCH_DISTANCE * TREE_PUNCH_DISTANCE;
-  
-      const trees = getTreesInBounds(
-          player.x - TREE_PUNCH_DISTANCE,
-          player.y - TREE_PUNCH_DISTANCE,
-          player.x + TREE_PUNCH_DISTANCE,
-          player.y + TREE_PUNCH_DISTANCE
-      );
-  
-      for (const tree of trees) {
-          const dx = tree.x - player.x;
-          const dy = tree.y - player.y;
-  
-          const distanceSq = dx * dx + dy * dy;
-  
-          if (distanceSq <= nearestDistanceSq) {
-              nearest = tree;
-              nearestDistanceSq = distanceSq;
-          }
-      }
-  
-      return nearest;
-  }
-
-
-
-
-
+    // ============================================================
     // HITBOX RENDERING
+    // ============================================================
     function drawHitboxes(cameraX, cameraY) {
-        if (!developerMode) return;
-    
-        ctx.save();
-        ctx.lineWidth = 1;
-    
-        // PLAYER HITBOX (RED)
-        ctx.strokeStyle = "#ff0000";
+      if (!developerMode) return;
+
+      ctx.save();
+      ctx.lineWidth = 1;
+
+      // PLAYER HITBOX (RED)
+      ctx.strokeStyle = "#ff0000";
+
+      ctx.strokeRect(
+        Math.round(player.x - player.width / 2 - cameraX),
+        Math.round(player.y - player.height / 2 - cameraY),
+        player.width,
+        player.height
+      );
+
+      // TREE HITBOXES (BLUE)
+      const trees = getTreesInBounds(
+        cameraX - TREE_SIZE,
+        cameraY - TREE_SIZE,
+        cameraX + canvas.width + TREE_SIZE,
+        cameraY + canvas.height + TREE_SIZE
+      );
+
+      ctx.strokeStyle = "#0088ff";
+
+      for (const tree of trees) {
         ctx.strokeRect(
-            Math.round(player.x - player.width / 2 - cameraX),
-            Math.round(player.y - player.height / 2 - cameraY),
-            player.width,
-            player.height
+          Math.round(
+            tree.x - TREE_TRUNK_HALF_WIDTH - cameraX
+          ),
+          Math.round(
+            tree.y - TREE_TRUNK_DEPTH - cameraY
+          ),
+          TREE_TRUNK_HALF_WIDTH * 2,
+          TREE_TRUNK_DEPTH
         );
-    
-        // TREE HITBOXES (BLUE)
-        const trees = getTreesInBounds(
-            cameraX - TREE_SIZE,
-            cameraY - TREE_SIZE,
-            cameraX + canvas.width + TREE_SIZE,
-            cameraY + canvas.height + TREE_SIZE
-        );
-    
-        ctx.strokeStyle = "#0088ff";
-    
-        for (const tree of trees) {
-            ctx.strokeRect(
-                Math.round(tree.x - TREE_TRUNK_HALF_WIDTH - cameraX),
-                Math.round(tree.y - TREE_TRUNK_DEPTH - cameraY),
-                TREE_TRUNK_HALF_WIDTH * 2,
-                TREE_TRUNK_DEPTH
-            );
-        }
-    
-        // PEDESTAL HITBOXES (YELLOW)
-        ctx.strokeStyle = "#ffff00";
-    
-        const firstX = Math.floor(
-            (cameraX - PLOT_ORIGIN_X - PLOT_WIDTH) / PLOT_STEP_X
-        );
-    
-        const lastX = Math.floor(
-            (cameraX + canvas.width - PLOT_ORIGIN_X) / PLOT_STEP_X
-        );
-    
-        const firstY = Math.floor(
-            (cameraY - PLOT_ORIGIN_Y - PLOT_HEIGHT) / PLOT_STEP_Y
-        );
-    
-        const lastY = Math.floor(
-            (cameraY + canvas.height - PLOT_ORIGIN_Y) / PLOT_STEP_Y
-        );
-    
-        for (let plotY = firstY; plotY <= lastY; plotY++) {
-            for (let plotX = firstX; plotX <= lastX; plotX++) {
-                const worldX = PLOT_ORIGIN_X + plotX * PLOT_STEP_X;
-                const worldY = PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y;
-    
-                for (let row = 0; row < PLOT_ROWS; row++) {
-                    for (let col = 0; col < PLOT_COLUMNS; col++) {
-                        const x = worldX +
-                            (PLOT_PADDING + col * PEDESTAL_STEP) * TILE_SIZE;
-    
-                        const y = worldY +
-                            (PLOT_PADDING + row * PEDESTAL_STEP) * TILE_SIZE +
-                            TILE_SIZE - PEDESTAL_HITBOX_HEIGHT;
-    
-                        ctx.strokeRect(
-                            Math.round(x - cameraX),
-                            Math.round(y - cameraY),
-                            TILE_SIZE,
-                            PEDESTAL_HITBOX_HEIGHT
-                        );
-                    }
-                }
+      }
+
+      // PEDESTAL HITBOXES (YELLOW)
+      ctx.strokeStyle = "#ffff00";
+
+      const firstX = Math.floor(
+        (cameraX - PLOT_ORIGIN_X - PLOT_WIDTH) / PLOT_STEP_X
+      );
+
+      const lastX = Math.floor(
+        (cameraX + canvas.width - PLOT_ORIGIN_X) / PLOT_STEP_X
+      );
+
+      const firstY = Math.floor(
+        (cameraY - PLOT_ORIGIN_Y - PLOT_HEIGHT) / PLOT_STEP_Y
+      );
+
+      const lastY = Math.floor(
+        (cameraY + canvas.height - PLOT_ORIGIN_Y) / PLOT_STEP_Y
+      );
+
+      for (let plotY = firstY; plotY <= lastY; plotY++) {
+        for (let plotX = firstX; plotX <= lastX; plotX++) {
+          const worldX =
+            PLOT_ORIGIN_X + plotX * PLOT_STEP_X;
+
+          const worldY =
+            PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y;
+
+          for (let row = 0; row < PLOT_ROWS; row++) {
+            for (let col = 0; col < PLOT_COLUMNS; col++) {
+              const x = worldX +
+                (PLOT_PADDING + col * PEDESTAL_STEP) *
+                TILE_SIZE;
+
+              const y = worldY +
+                (PLOT_PADDING + row * PEDESTAL_STEP) *
+                TILE_SIZE +
+                TILE_SIZE -
+                PEDESTAL_HITBOX_HEIGHT;
+
+              ctx.strokeRect(
+                Math.round(x - cameraX),
+                Math.round(y - cameraY),
+                TILE_SIZE,
+                PEDESTAL_HITBOX_HEIGHT
+              );
             }
+          }
         }
-    
-        ctx.restore();
+      }
+
+      ctx.restore();
     }
   </script>
 </body>
