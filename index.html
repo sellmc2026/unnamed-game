@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -311,30 +310,32 @@
 
     // Object drop-shadow
     function drawShadow(ctx, x, y, width, height, options = {}) {
-      const {
-        enabled = true,
-        opacity = 0.25,
-        scale = 0.7,
-        offsetX = -1,
-        offsetY = -2
-      } = options;
-
-      if (!enabled) return;
-
-      ctx.save();
-      ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
-      ctx.beginPath();
-      ctx.ellipse(
-        x + width / 2,
-        y + height + offsetY,
-        width * scale / 2,
-        Math.max(1, height * 0.12),
-        0,
-        0,
-        Math.PI * 2
-      );
-      ctx.fill();
-      ctx.restore();
+        const {
+            enabled = true,
+            opacity = 0.25,
+            scale = 0.7,
+            offsetX = 0,
+            offsetY = -2
+        } = options;
+    
+        if (!enabled) return;
+    
+        ctx.save();
+        ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
+    
+        ctx.beginPath();
+        ctx.ellipse(
+            x + width / 2 + offsetX,
+            y + height + offsetY,
+            (width * scale) / 2,
+            Math.max(1, height * 0.12),
+            0,
+            0,
+            Math.PI * 2
+        );
+        ctx.fill();
+    
+        ctx.restore();
     }
 
     // ============================================================
@@ -344,7 +345,7 @@
       "basic-egg": {
         name: "Basic Egg",
         icon: "items/basic-egg.png",
-        maxStack: 99
+        maxStack: 52
       }
     };
 
@@ -354,7 +355,7 @@
           .replace(/[-_]/g, " ")
           .replace(/\b\w/g, char => char.toUpperCase()),
         icon: `items/${itemId}.png`,
-        maxStack: 99
+        maxStack: 52
       };
     }
 
@@ -1167,26 +1168,25 @@
     }
 
     function drawTree(tree, cameraX, cameraY) {
-      if (!imageReady(treeTexture)) return;
-
-      const x = Math.round(tree.x - cameraX);
-      const y = Math.round(tree.y - cameraY);
-
-      drawShadow(ctx, x - 7, y - 5, 14, 5, {
-        opacity: 0.23,
-        scale: 4,
-        offsetY: 1
-      });
-
-      // Only move the rendered tree during a punch.
-      // Its real coordinates and hitbox remain unchanged.
-      ctx.drawImage(
-        treeTexture,
-        x - TREE_SIZE / 2,
-        y - TREE_SIZE + tree.shakeOffsetY,
-        TREE_SIZE,
-        TREE_SIZE
-      );
+        if (!imageReady(treeTexture)) return;
+    
+        const x = Math.round(tree.x - cameraX);
+        const y = Math.round(tree.y - cameraY);
+    
+        drawShadow(ctx, x - 12, y - 4, 24, 10, {
+            opacity: 0.20,
+            scale: 1.15,
+            offsetX: 0,
+            offsetY: 0
+        });
+    
+        ctx.drawImage(
+            treeTexture,
+            x - TREE_SIZE / 2,
+            y - TREE_SIZE + tree.shakeOffsetY,
+            TREE_SIZE,
+            TREE_SIZE
+        );
     }
 
     function canMoveTo(x, y) {
@@ -1392,35 +1392,24 @@
     // DRAW PLAYER
     // ============================================================
     function drawPlayer(screenX, screenY) {
-      const size = PLAYER_SPRITE_SIZE;
-
-      const px = Math.floor(
-        screenX - size / 2
-      );
-
-      const py = Math.floor(
-        screenY - size + 4
-      );
-
-      const sprite = getPlayerSprite();
-
-      drawShadow(ctx, px, py, size, size, {
-        enabled: player.shadow,
-        opacity: 0.25,
-        scale: 0.65,
-        offsetX: 0.5,
-        offsetY: -3.5
-      });
-
-      if (imageReady(sprite)) {
-        ctx.drawImage(
-          sprite,
-          px,
-          py,
-          size,
-          size
-        );
-      }
+        const size = PLAYER_SPRITE_SIZE;
+    
+        const px = Math.floor(screenX - size / 2);
+        const py = Math.floor(screenY - size + 4);
+    
+        const sprite = getPlayerSprite();
+    
+        drawShadow(ctx, screenX - 7, screenY - 2, 14, 10, {
+            enabled: player.shadow,
+            opacity: 0.22,
+            scale: 1.0,
+            offsetX: 0,
+            offsetY: 0
+        });
+    
+        if (imageReady(sprite)) {
+            ctx.drawImage(sprite, px, py, size, size);
+        }
     }
 
     // ============================================================
