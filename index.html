@@ -253,6 +253,14 @@
     // ============================================================
     // SETTINGS
     // ============================================================
+
+
+    // DEVELOPER MODE STUFF
+    let developerMode = false
+
+
+
+    
     const TILE_SIZE = 16;
     const PIXEL_SCALE = 3;
     const WALK_SPEED = 70;
@@ -1546,13 +1554,25 @@
     // CONTROLS
     // ============================================================
     window.addEventListener("keydown", (event) => {
-      if (event.code === "Enter") {
+      // Toggle Developer Mode with CTRL + O
+      if (event.ctrlKey && event.code === "KeyO") {
+        event.preventDefault();
+      
+        if (!event.repeat) {
+            developerMode = !developerMode;
+            console.log("Developer Mode:", developerMode ? "ON" : "OFF");
+        }
+      
+        return;
+      }
+      
+      if (event.code === "KeyX") {
         const tree = getNearestTree();
     
         if (tree) {
             punchTree(tree);
         }
-    }
+      }
         
       
       if (
@@ -1653,6 +1673,92 @@
   
       return nearest;
   }
+
+
+
+
+
+    // HITBOX RENDERING
+    function drawHitboxes(cameraX, cameraY) {
+        if (!developerMode) return;
+    
+        ctx.save();
+        ctx.lineWidth = 1;
+    
+        // PLAYER HITBOX (RED)
+        ctx.strokeStyle = "#ff0000";
+        ctx.strokeRect(
+            Math.round(player.x - player.width / 2 - cameraX),
+            Math.round(player.y - player.height / 2 - cameraY),
+            player.width,
+            player.height
+        );
+    
+        // TREE HITBOXES (BLUE)
+        const trees = getTreesInBounds(
+            cameraX - TREE_SIZE,
+            cameraY - TREE_SIZE,
+            cameraX + canvas.width + TREE_SIZE,
+            cameraY + canvas.height + TREE_SIZE
+        );
+    
+        ctx.strokeStyle = "#0088ff";
+    
+        for (const tree of trees) {
+            ctx.strokeRect(
+                Math.round(tree.x - TREE_TRUNK_HALF_WIDTH - cameraX),
+                Math.round(tree.y - TREE_TRUNK_DEPTH - cameraY),
+                TREE_TRUNK_HALF_WIDTH * 2,
+                TREE_TRUNK_DEPTH
+            );
+        }
+    
+        // PEDESTAL HITBOXES (YELLOW)
+        ctx.strokeStyle = "#ffff00";
+    
+        const firstX = Math.floor(
+            (cameraX - PLOT_ORIGIN_X - PLOT_WIDTH) / PLOT_STEP_X
+        );
+    
+        const lastX = Math.floor(
+            (cameraX + canvas.width - PLOT_ORIGIN_X) / PLOT_STEP_X
+        );
+    
+        const firstY = Math.floor(
+            (cameraY - PLOT_ORIGIN_Y - PLOT_HEIGHT) / PLOT_STEP_Y
+        );
+    
+        const lastY = Math.floor(
+            (cameraY + canvas.height - PLOT_ORIGIN_Y) / PLOT_STEP_Y
+        );
+    
+        for (let plotY = firstY; plotY <= lastY; plotY++) {
+            for (let plotX = firstX; plotX <= lastX; plotX++) {
+                const worldX = PLOT_ORIGIN_X + plotX * PLOT_STEP_X;
+                const worldY = PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y;
+    
+                for (let row = 0; row < PLOT_ROWS; row++) {
+                    for (let col = 0; col < PLOT_COLUMNS; col++) {
+                        const x = worldX +
+                            (PLOT_PADDING + col * PEDESTAL_STEP) * TILE_SIZE;
+    
+                        const y = worldY +
+                            (PLOT_PADDING + row * PEDESTAL_STEP) * TILE_SIZE +
+                            TILE_SIZE - PEDESTAL_HITBOX_HEIGHT;
+    
+                        ctx.strokeRect(
+                            Math.round(x - cameraX),
+                            Math.round(y - cameraY),
+                            TILE_SIZE,
+                            PEDESTAL_HITBOX_HEIGHT
+                        );
+                    }
+                }
+            }
+        }
+    
+        ctx.restore();
+    }
   </script>
 </body>
 </html>
