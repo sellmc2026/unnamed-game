@@ -262,33 +262,7 @@ const SPRINT_SPEED = 125;
 const PLAYER_SPRITE_SIZE = 32;
 const WALK_FRAME_DISTANCE = TILE_SIZE / 1.5;
 
-// PLOTS
-const PLOT_COLUMNS = 5;
-const PLOT_ROWS = 5;
-const PEDESTAL_GAP = 2;
-const PLOT_PADDING = 1;
-const PLOT_GAP = 9;
-const PLOT_COLOR = "#d3d3d3";
-const PEDESTAL_SCALE = 2;
-const PEDESTAL_HITBOX_HEIGHT = 18;
-const PEDESTAL_STEP = PEDESTAL_GAP + 1;
 
-const PLOT_WIDTH = (
-    PLOT_COLUMNS +
-    (PLOT_COLUMNS - 1) * PEDESTAL_GAP +
-    PLOT_PADDING * 2
-) * TILE_SIZE;
-
-const PLOT_HEIGHT = (
-    PLOT_ROWS +
-    (PLOT_ROWS - 1) * PEDESTAL_GAP +
-    PLOT_PADDING * 2
-) * TILE_SIZE;
-
-const PLOT_STEP_X = PLOT_WIDTH + PLOT_GAP * TILE_SIZE;
-const PLOT_STEP_Y = PLOT_HEIGHT + PLOT_GAP * TILE_SIZE;
-const PLOT_ORIGIN_X = -PLOT_WIDTH / 2;
-const PLOT_ORIGIN_Y = -PLOT_HEIGHT / 2;
 
 // EGGS
 const EGG_RARITY = 700;
@@ -927,83 +901,7 @@ function drawGround(cameraX, cameraY) {
     }
 }
 
-// ============================================================
-// DRAW PLOTS AND PEDESTALS
-// ============================================================
 
-function drawPlots(cameraX, cameraY, foreground = false) {
-    const firstX = Math.floor(
-        (cameraX - PLOT_ORIGIN_X - PLOT_WIDTH) / PLOT_STEP_X
-    );
-
-    const lastX = Math.floor(
-        (cameraX + canvas.width - PLOT_ORIGIN_X) / PLOT_STEP_X
-    );
-
-    const firstY = Math.floor(
-        (cameraY - PLOT_ORIGIN_Y - PLOT_HEIGHT) / PLOT_STEP_Y
-    );
-
-    const lastY = Math.floor(
-        (cameraY + canvas.height - PLOT_ORIGIN_Y) / PLOT_STEP_Y
-    );
-
-    const pedestalSize = Math.round(
-        TILE_SIZE * PEDESTAL_SCALE
-    );
-
-    for (let plotY = firstY; plotY <= lastY; plotY++) {
-        for (let plotX = firstX; plotX <= lastX; plotX++) {
-            const worldX = PLOT_ORIGIN_X + plotX * PLOT_STEP_X;
-            const worldY = PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y;
-
-            const x = Math.floor(worldX - cameraX);
-            const y = Math.floor(worldY - cameraY);
-
-            if (!foreground) {
-                ctx.fillStyle = PLOT_COLOR;
-                ctx.fillRect(x, y, PLOT_WIDTH, PLOT_HEIGHT);
-            }
-
-            if (!imageReady(pedestalTexture)) continue;
-
-            for (let row = 0; row < PLOT_ROWS; row++) {
-                for (let col = 0; col < PLOT_COLUMNS; col++) {
-                    const tileX = (
-                        PLOT_PADDING + col * PEDESTAL_STEP
-                    ) * TILE_SIZE;
-
-                    const tileY = (
-                        PLOT_PADDING + row * PEDESTAL_STEP
-                    ) * TILE_SIZE;
-
-                    const pedestalFeetY =
-                        worldY + tileY + TILE_SIZE;
-
-                    if ((pedestalFeetY > player.y) !== foreground) {
-                        continue;
-                    }
-
-                    const px = Math.round(
-                        x + tileX -
-                        (pedestalSize - TILE_SIZE) / 2
-                    );
-
-                    const py = Math.round(
-                        y + tileY + TILE_SIZE - pedestalSize
-                    );
-
-                    ctx.drawImage(
-                        pedestalTexture,
-                        px, py,
-                        pedestalSize,
-                        pedestalSize
-                    );
-                }
-            }
-        }
-    }
-}
 
 // ============================================================
 // PEDESTAL COLLISION
