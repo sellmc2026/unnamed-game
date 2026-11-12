@@ -1300,7 +1300,6 @@ function drawTree(tree, cameraX, cameraY) {
             animation.startedAt !== null &&
             elapsed >= TREE_PUNCH_DURATION
         ) {
-            // Return to the regular tree.
             tree.animation = null;
             tree.punching = false;
         } else if (imageReady(animation.image)) {
@@ -1311,18 +1310,36 @@ function drawTree(tree, cameraX, cameraY) {
 
     if (!imageReady(texture)) return;
 
-    // The shadow stays in place during the animation.
-    drawShadow(ctx, x - 12, y - 4, 24, 10, {
-        opacity: 0.20,
-        scale: 1.15,
-        offsetX: 0,
-        offsetY: 0
-    });
+    // TREE SHADOW SETTINGS
+    const shadowX = x;
+    const shadowY = y - 3;
+    const shadowWidth = 13;
+    const shadowHeight = 3;
+    const shadowOpacity = 0.22;
 
+    // Draw shadow beneath the trunk
+    ctx.save();
+
+    ctx.fillStyle = `rgba(0, 0, 0, ${shadowOpacity})`;
+
+    ctx.beginPath();
+    ctx.ellipse(
+        shadowX,
+        shadowY,
+        shadowWidth,
+        shadowHeight,
+        0,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+    ctx.restore();
+
+    // Draw tree
     ctx.save();
 
     if (flip) {
-        // Mirror the animated GIF horizontally.
         ctx.translate(x, 0);
         ctx.scale(-1, 1);
 
@@ -1553,7 +1570,11 @@ function drawPlayer(screenX, screenY) {
     const sprite = getPlayerSprite();
 
     // SHADOW SETTINGS
-    const shadowX = screenX + 2;
+    let shadowX = screenX + 2;
+
+    if (player.facing === "right") {
+        shadowX = screenX - 3;
+    }
     const shadowY = py + size - 2;
     const shadowWidth = 14;
     const shadowHeight = 2.5;
