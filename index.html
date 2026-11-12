@@ -908,72 +908,11 @@ function drawGround(cameraX, cameraY) {
 // ============================================================
 
 function isPositionSolid(worldX, worldY) {
-    const plotX = Math.floor(
-        (worldX - PLOT_ORIGIN_X) / PLOT_STEP_X
-    );
-
-    const plotY = Math.floor(
-        (worldY - PLOT_ORIGIN_Y) / PLOT_STEP_Y
-    );
-
-    const localX = worldX - (
-        PLOT_ORIGIN_X + plotX * PLOT_STEP_X
-    );
-
-    const localY = worldY - (
-        PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y
-    );
-
-    if (
-        localX >= PLOT_WIDTH ||
-        localY >= PLOT_HEIGHT
-    ) return false;
-
-    const colTile =
-        Math.floor(localX / TILE_SIZE) - PLOT_PADDING;
-
-    const rowTile =
-        Math.floor(localY / TILE_SIZE) - PLOT_PADDING;
-
-    const isPedestal =
-        colTile >= 0 &&
-        colTile < PLOT_COLUMNS * PEDESTAL_STEP &&
-        rowTile >= 0 &&
-        rowTile < PLOT_ROWS * PEDESTAL_STEP &&
-        colTile % PEDESTAL_STEP === 0 &&
-        rowTile % PEDESTAL_STEP === 0;
-
-    if (!isPedestal) return false;
-
-    return localY % TILE_SIZE >= (
-        TILE_SIZE - PEDESTAL_HITBOX_HEIGHT
-    );
+    return false;
 }
 
-// ============================================================
-// PLOT PROXIMITY
-// ============================================================
-
 function isNearPlot(x, y, margin = 10) {
-    const localX = (
-        (x - PLOT_ORIGIN_X) % PLOT_STEP_X +
-        PLOT_STEP_X
-    ) % PLOT_STEP_X;
-
-    const localY = (
-        (y - PLOT_ORIGIN_Y) % PLOT_STEP_Y +
-        PLOT_STEP_Y
-    ) % PLOT_STEP_Y;
-
-    const nearPlotX =
-        localX <= PLOT_WIDTH + margin ||
-        localX >= PLOT_STEP_X - margin;
-
-    const nearPlotY =
-        localY <= PLOT_HEIGHT + margin ||
-        localY >= PLOT_STEP_Y - margin;
-
-    return nearPlotX && nearPlotY;
+    return false;
 }
 
 // ============================================================
@@ -1095,9 +1034,6 @@ function punchTree(tree) {
 
     tree.punching = true;
 
-    // Down sprites always shake right (original GIF).
-    // Up sprites always shake left (flipped GIF).
-    // Side sprites use which side of the tree the player is on.
     let flip = false;
 
     if (player.facing === "down") {
@@ -1111,24 +1047,23 @@ function punchTree(tree) {
     const image = new Image();
 
     const animation = {
-        image,
-        flip,
-        startedAt: null
+        image: image,
+        flip: flip,
+        startedAt: gameTime,
+        ready: false
     };
 
     tree.animation = animation;
 
     image.onload = () => {
-        if (tree.animation === animation) {
-            animation.startedAt = gameTime;
-        }
+        if (tree.animation !== animation) return;
+
+        animation.ready = true;
+        animation.startedAt = gameTime;
     };
 
     image.onerror = () => {
-        console.error(
-            "Could not load tree punch GIF:",
-            TREE_PUNCH_GIF
-        );
+        console.error("Failed to load:", TREE_PUNCH_GIF);
 
         if (tree.animation === animation) {
             tree.animation = null;
@@ -1136,14 +1071,9 @@ function punchTree(tree) {
         }
     };
 
-    // Unique URL makes each punch start the GIF again.
     image.src = TREE_PUNCH_GIF +
-        "?punch=" +
-        Date.now() +
-        "-" +
-        Math.random().toString(36).slice(2);
+        "?punch=" + Date.now() + "-" + Math.random();
 }
-
 // ============================================================
 // FIND NEAREST TREE
 // ============================================================
@@ -1190,17 +1120,12 @@ function drawTree(tree, cameraX, cameraY) {
     const animation = tree.animation;
 
     if (animation) {
-        const elapsed = animation.startedAt === null
-            ? 0
-            : gameTime - animation.startedAt;
+        const elapsed = gameTime - animation.startedAt;
 
-        if (
-            animation.startedAt !== null &&
-            elapsed >= TREE_PUNCH_DURATION
-        ) {
+        if (elapsed >= TREE_PUNCH_DURATION) {
             tree.animation = null;
             tree.punching = false;
-        } else if (imageReady(animation.image)) {
+        } else if (animation.ready && imageReady(animation.image)) {
             texture = animation.image;
             flip = animation.flip;
         }
@@ -1208,14 +1133,13 @@ function drawTree(tree, cameraX, cameraY) {
 
     if (!imageReady(texture)) return;
 
-    // TREE SHADOW SETTINGS
+    // TREE SHADOW
     const shadowX = x;
     const shadowY = y - 8;
     const shadowWidth = 16;
     const shadowHeight = 10;
     const shadowOpacity = 0.22;
 
-    // Draw shadow beneath the trunk
     ctx.save();
 
     ctx.fillStyle = `rgba(0, 0, 0, ${shadowOpacity})`;
@@ -1230,11 +1154,11 @@ function drawTree(tree, cameraX, cameraY) {
         0,
         Math.PI * 2
     );
-
     ctx.fill();
+
     ctx.restore();
 
-    // Draw tree
+    // TREE SPRITE
     ctx.save();
 
     if (flip) {
@@ -1623,10 +1547,8 @@ function draw() {
     );
 
     drawGround(cameraX, cameraY);
-    drawPlots(cameraX, cameraY, false);
     drawEggs(cameraX, cameraY);
 
-    // Get visible trees.
     const trees = getTreesInBounds(
         cameraX - TREE_SIZE,
         cameraY - TREE_SIZE,
@@ -1634,7 +1556,7 @@ function draw() {
         cameraY + canvas.height + TREE_SIZE
     );
 
-    // Trees behind the player.
+    // Trees behind player
     for (const tree of trees) {
         if (tree.y <= player.y) {
             drawTree(tree, cameraX, cameraY);
@@ -1646,16 +1568,13 @@ function draw() {
         Math.floor(canvas.height / 2)
     );
 
-    // Trees in front of the player.
+    // Trees in front of player
     for (const tree of trees) {
         if (tree.y > player.y) {
             drawTree(tree, cameraX, cameraY);
         }
     }
 
-    drawPlots(cameraX, cameraY, true);
-
-    // Developer mode draws hitboxes on top.
     drawHitboxes(cameraX, cameraY);
 }
 
@@ -1823,74 +1742,15 @@ function drawHitboxes(cameraX, cameraY) {
 
     for (const tree of trees) {
         ctx.strokeRect(
-            Math.round(
-                tree.x - TREE_TRUNK_HALF_WIDTH - cameraX
-            ),
-            Math.round(
-                tree.y - TREE_TRUNK_DEPTH - cameraY
-            ),
+            Math.round(tree.x - TREE_TRUNK_HALF_WIDTH - cameraX),
+            Math.round(tree.y - TREE_TRUNK_DEPTH - cameraY),
             TREE_TRUNK_HALF_WIDTH * 2,
             TREE_TRUNK_DEPTH
         );
     }
 
-    // PEDESTAL HITBOXES - YELLOW
-    ctx.strokeStyle = "#ffff00";
-
-    const firstX = Math.floor(
-        (cameraX - PLOT_ORIGIN_X - PLOT_WIDTH) / PLOT_STEP_X
-    );
-
-    const lastX = Math.floor(
-        (cameraX + canvas.width - PLOT_ORIGIN_X) / PLOT_STEP_X
-    );
-
-    const firstY = Math.floor(
-        (cameraY - PLOT_ORIGIN_Y - PLOT_HEIGHT) / PLOT_STEP_Y
-    );
-
-    const lastY = Math.floor(
-        (cameraY + canvas.height - PLOT_ORIGIN_Y) / PLOT_STEP_Y
-    );
-
-    for (let plotY = firstY; plotY <= lastY; plotY++) {
-        for (let plotX = firstX; plotX <= lastX; plotX++) {
-            const worldX =
-                PLOT_ORIGIN_X + plotX * PLOT_STEP_X;
-
-            const worldY =
-                PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y;
-
-            for (let row = 0; row < PLOT_ROWS; row++) {
-                for (let col = 0; col < PLOT_COLUMNS; col++) {
-                    const x = worldX +
-                        (
-                            PLOT_PADDING +
-                            col * PEDESTAL_STEP
-                        ) * TILE_SIZE;
-
-                    const y = worldY +
-                        (
-                            PLOT_PADDING +
-                            row * PEDESTAL_STEP
-                        ) * TILE_SIZE +
-                        TILE_SIZE -
-                        PEDESTAL_HITBOX_HEIGHT;
-
-                    ctx.strokeRect(
-                        Math.round(x - cameraX),
-                        Math.round(y - cameraY),
-                        TILE_SIZE,
-                        PEDESTAL_HITBOX_HEIGHT
-                    );
-                }
-            }
-        }
-    }
-
     ctx.restore();
 }
-
 </script>
 </body>
 </html>
