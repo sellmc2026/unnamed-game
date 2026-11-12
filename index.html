@@ -1,427 +1,441 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pixel Pet Game</title>
-  <style>
-    * { box-sizing: border-box; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pixel Pet Game</title>
+<style>
+* { box-sizing: border-box; }
 
-    html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #79a66e;
-    }
+html, body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #79a66e;
+}
 
-    canvas {
-      display: block;
-      width: 100vw;
-      height: 100vh;
-      image-rendering: pixelated;
-    }
+canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    image-rendering: pixelated;
+}
 
-    /* Sharp UI text, independent of canvas resolution */
-    .game-ui {
-      font: 600 14px/1.4 ui-monospace, Menlo, Consolas, monospace;
-      letter-spacing: 0;
-      -webkit-font-smoothing: auto;
-      color: #f9f2d8;
-    }
+.game-ui {
+    font: 600 14px/1.4 ui-monospace, Menlo, Consolas, monospace;
+    color: #f9f2d8;
+}
 
-    .hud {
-      position: fixed;
-      top: 14px;
-      left: 14px;
-      z-index: 3;
-      padding: 10px 13px;
-      background: #2a4031;
-      border: 2px solid #15271b;
-      box-shadow: 3px 3px 0 #1b2d1f;
-      pointer-events: none;
-    }
+.hud {
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 3;
+    padding: 10px 13px;
+    background: #2a4031;
+    border: 2px solid #15271b;
+    box-shadow: 3px 3px 0 #1b2d1f;
+    pointer-events: none;
+}
 
-    .hud kbd, .pickup-label kbd {
-      display: inline-block;
-      min-width: 23px;
-      padding: 1px 5px;
-      background: #d6cba4;
-      border: 1px solid #f7e9bd;
-      color: #253624;
-      font: inherit;
-      text-align: center;
-      margin-right: 6px;
-    }
+.hud kbd, .pickup-label kbd {
+    display: inline-block;
+    min-width: 23px;
+    padding: 1px 5px;
+    background: #d6cba4;
+    border: 1px solid #f7e9bd;
+    color: #253624;
+    font: inherit;
+    text-align: center;
+    margin-right: 6px;
+}
 
-    .prompt-area {
-      position: fixed;
-      bottom: 22px;
-      left: 0;
-      right: 0;
-      display: flex;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 5;
-    }
+.prompt-area {
+    position: fixed;
+    bottom: 22px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 5;
+}
 
-    .pickup-label, .toast {
-      padding: 9px 13px;
-      border: 2px solid #17281b;
-      background: #283c2d;
-      box-shadow: 3px 3px 0 #17281b;
-    }
+.pickup-label, .toast {
+    padding: 9px 13px;
+    border: 2px solid #17281b;
+    background: #283c2d;
+    box-shadow: 3px 3px 0 #17281b;
+}
 
-    .toast-area {
-      position: fixed;
-      top: 17px;
-      left: 0;
-      right: 0;
-      display: flex;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 30;
-    }
+.toast-area {
+    position: fixed;
+    top: 17px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 30;
+}
 
-    .inventory-screen {
-      position: fixed;
-      inset: 0;
-      z-index: 20;
-      background: rgba(12, 24, 15, 0.70);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 12px;
-    }
+.inventory-screen {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    background: rgba(12, 24, 15, 0.70);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+}
 
-    [hidden] {
-      display: none !important;
-    }
+[hidden] {
+    display: none !important;
+}
 
-    .inventory-panel {
-      width: min(460px, 100%);
-      max-height: calc(100vh - 24px);
-      overflow-y: auto;
-      padding: 16px;
-      border: 4px solid #2c332a;
-      background: #e7d9b2;
-      color: #2c332a;
-      box-shadow: 6px 6px 0 #101d13;
-    }
+.inventory-panel {
+    width: min(460px, 100%);
+    max-height: calc(100vh - 24px);
+    overflow-y: auto;
+    padding: 16px;
+    border: 4px solid #2c332a;
+    background: #e7d9b2;
+    color: #2c332a;
+    box-shadow: 6px 6px 0 #101d13;
+}
 
-    .inventory-heading {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      margin-bottom: 14px;
-      background: #667b57;
-      color: #fff9e5;
-      font-size: 19px;
-      font-weight: 800;
-    }
+.inventory-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+    background: #667b57;
+    color: #fff9e5;
+    font-size: 19px;
+    font-weight: 800;
+}
 
-    .inventory-heading small {
-      font-size: 12px;
-      font-weight: 600;
-      white-space: nowrap;
-    }
+.inventory-heading small {
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
 
-    .inventory-grid {
-      display: grid;
-      grid-template-columns: repeat(6, minmax(0, 1fr));
-      gap: 6px;
-    }
+.inventory-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 6px;
+}
 
-    .inventory-slot {
-      aspect-ratio: 1 / 1;
-      width: 100%;
-      min-width: 0;
-      display: grid;
-      place-items: center;
-      position: relative;
-      border: 2px solid #7d7a65;
-      background: #bcb79a;
-      padding: 3px;
-      cursor: pointer;
-      border-radius: 8px;
-    }
+.inventory-slot {
+    aspect-ratio: 1;
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    place-items: center;
+    position: relative;
+    border: 2px solid #7d7a65;
+    background: #bcb79a;
+    padding: 3px;
+    cursor: pointer;
+    border-radius: 8px;
+}
 
-    .inventory-slot:hover {
-      background: #d7d1ac;
-    }
+.inventory-slot:hover {
+    background: #d7d1ac;
+}
 
-    .inventory-slot.selected {
-      border-color: #9f7626;
-      background: #f2df9b;
-    }
+.inventory-slot.selected {
+    border-color: #9f7626;
+    background: #f2df9b;
+}
 
-    .item-icon {
-      width: 80%;
-      height: 80%;
-      object-fit: contain;
-      image-rendering: pixelated;
-      user-select: none;
-      pointer-events: none;
-    }
+.item-icon {
+    width: 80%;
+    height: 80%;
+    object-fit: contain;
+    image-rendering: pixelated;
+    user-select: none;
+    pointer-events: none;
+}
 
-    .item-quantity {
-      position: absolute;
-      bottom: 1px;
-      right: 2px;
-      font-size: 16px;
-      line-height: 1;
-      color: #fff;
-      text-shadow:
+.item-quantity {
+    position: absolute;
+    bottom: 1px;
+    right: 2px;
+    font-size: 16px;
+    line-height: 1;
+    color: #fff;
+    text-shadow:
         -1px -1px #263120,
-        1px -1px #263120,
-        -1px 1px #263120,
-        1px 1px #263120;
-    }
+         1px -1px #263120,
+        -1px  1px #263120,
+         1px  1px #263120;
+}
 
-    .inventory-info {
-      min-height: 43px;
-      margin-top: 13px;
-      padding: 10px 8px 0;
-      border-top: 2px solid #b6a981;
-      font-size: 13px;
-    }
+.inventory-info {
+    min-height: 43px;
+    margin-top: 13px;
+    padding: 10px 8px 0;
+    border-top: 2px solid #b6a981;
+    font-size: 13px;
+}
 
-    .inventory-hint {
-      margin-top: 4px;
-      font-size: 12px;
-      color: #60614d;
-    }
+.inventory-hint {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #60614d;
+}
 
-    @media (max-width: 390px) {
-      .inventory-grid { gap: 4px; }
-      .inventory-panel { padding: 11px; }
-      .inventory-heading { font-size: 16px; }
-      .inventory-heading small { font-size: 10px; }
-      .item-quantity { font-size: 11px; }
-    }
-  </style>
+@media (max-width: 390px) {
+    .inventory-grid { gap: 4px; }
+    .inventory-panel { padding: 11px; }
+    .inventory-heading { font-size: 16px; }
+    .inventory-heading small { font-size: 10px; }
+    .item-quantity { font-size: 11px; }
+}
+</style>
 </head>
 <body>
-  <canvas id="game"></canvas>
 
-  <!-- Full-resolution interface -->
-  <div class="game-ui">
+<canvas id="game"></canvas>
+
+<div class="game-ui">
     <div class="hud">
-      <kbd>E</kbd> Inventory
+        <kbd>E</kbd> Inventory
     </div>
 
     <div class="prompt-area">
-      <div class="pickup-label" id="pickup-prompt" hidden>
-        <kbd>C</kbd> Pick up Basic Egg
-      </div>
+        <div class="pickup-label" id="pickup-prompt" hidden>
+            <kbd>C</kbd> Pick up Basic Egg
+        </div>
     </div>
 
     <div class="toast-area">
-      <div class="toast" id="toast" hidden></div>
+        <div class="toast" id="toast" hidden></div>
     </div>
 
     <div class="inventory-screen" id="inventory-screen" hidden>
-      <section
-        class="inventory-panel"
-        role="dialog"
-        aria-label="Inventory"
-        aria-modal="true"
-      >
-        <div class="inventory-heading">
-          <span>Inventory</span>
-          <small>E / ESC to close</small>
-        </div>
+        <section class="inventory-panel"
+                 role="dialog"
+                 aria-label="Inventory"
+                 aria-modal="true">
 
-        <div class="inventory-grid" id="inventory-grid"></div>
+            <div class="inventory-heading">
+                <span>Inventory</span>
+                <small>E / ESC to close</small>
+            </div>
 
-        <div class="inventory-info">
-          <div id="inventory-description">
-            Select an item to view it.
-          </div>
-          <div class="inventory-hint">
-            Click one slot, then another to move or stack items.
-          </div>
-        </div>
-      </section>
+            <div class="inventory-grid" id="inventory-grid"></div>
+
+            <div class="inventory-info">
+                <div id="inventory-description">
+                    Select an item to view it.
+                </div>
+                <div class="inventory-hint">
+                    Click one slot, then another to move or stack items.
+                </div>
+            </div>
+
+        </section>
     </div>
-  </div>
+</div>
 
-  <script>
-    "use strict";
+<script>
+"use strict";
 
-    // ============================================================
-    // SETTINGS
-    // ============================================================
+// ============================================================
+// SETTINGS
+// ============================================================
 
-    // DEVELOPER MODE STUFF
-    let developerMode = false;
+// DEVELOPER MODE
+let developerMode = false;
 
-    const TILE_SIZE = 16;
-    const PIXEL_SCALE = 3;
-    const WALK_SPEED = 70;
-    const SPRINT_SPEED = 125;
-    const PLAYER_SPRITE_SIZE = 32;
-    const WALK_FRAME_DISTANCE = TILE_SIZE / 1.5;
+const TILE_SIZE = 16;
+const PIXEL_SCALE = 3;
+const WALK_SPEED = 70;
+const SPRINT_SPEED = 125;
+const PLAYER_SPRITE_SIZE = 32;
+const WALK_FRAME_DISTANCE = TILE_SIZE / 1.5;
 
-    const PLOT_COLUMNS = 5;
-    const PLOT_ROWS = 5;
-    const PEDESTAL_GAP = 2;
-    const PLOT_PADDING = 1;
-    const PLOT_GAP = 9;
-    const PLOT_COLOR = "#d3d3d3";
-    const PEDESTAL_SCALE = 2;
-    const PEDESTAL_HITBOX_HEIGHT = 18;
-    const PEDESTAL_STEP = PEDESTAL_GAP + 1;
+// PLOTS
+const PLOT_COLUMNS = 5;
+const PLOT_ROWS = 5;
+const PEDESTAL_GAP = 2;
+const PLOT_PADDING = 1;
+const PLOT_GAP = 9;
+const PLOT_COLOR = "#d3d3d3";
+const PEDESTAL_SCALE = 2;
+const PEDESTAL_HITBOX_HEIGHT = 18;
+const PEDESTAL_STEP = PEDESTAL_GAP + 1;
 
-    const PLOT_WIDTH = (
-      PLOT_COLUMNS +
-      (PLOT_COLUMNS - 1) * PEDESTAL_GAP +
-      PLOT_PADDING * 2
-    ) * TILE_SIZE;
+const PLOT_WIDTH = (
+    PLOT_COLUMNS +
+    (PLOT_COLUMNS - 1) * PEDESTAL_GAP +
+    PLOT_PADDING * 2
+) * TILE_SIZE;
 
-    const PLOT_HEIGHT = (
-      PLOT_ROWS +
-      (PLOT_ROWS - 1) * PEDESTAL_GAP +
-      PLOT_PADDING * 2
-    ) * TILE_SIZE;
+const PLOT_HEIGHT = (
+    PLOT_ROWS +
+    (PLOT_ROWS - 1) * PEDESTAL_GAP +
+    PLOT_PADDING * 2
+) * TILE_SIZE;
 
-    const PLOT_STEP_X = PLOT_WIDTH + PLOT_GAP * TILE_SIZE;
-    const PLOT_STEP_Y = PLOT_HEIGHT + PLOT_GAP * TILE_SIZE;
-    const PLOT_ORIGIN_X = -PLOT_WIDTH / 2;
-    const PLOT_ORIGIN_Y = -PLOT_HEIGHT / 2;
+const PLOT_STEP_X = PLOT_WIDTH + PLOT_GAP * TILE_SIZE;
+const PLOT_STEP_Y = PLOT_HEIGHT + PLOT_GAP * TILE_SIZE;
+const PLOT_ORIGIN_X = -PLOT_WIDTH / 2;
+const PLOT_ORIGIN_Y = -PLOT_HEIGHT / 2;
 
-    // Lower this value to make ground eggs more common.
-    const EGG_RARITY = 1200;
-    const EGG_PICKUP_DISTANCE = 25;
+// EGGS
+const EGG_RARITY = 1200;
+const EGG_PICKUP_DISTANCE = 25;
 
-    // TREE SETTINGS
-    const TREE_PUNCH_DISTANCE = 30;
-    const TREE_CELL_TILES = 8;
-    const TREE_CHANCE_PERCENT = 45;
-    const TREE_SIZE = 64;
-    const TREE_TRUNK_HALF_WIDTH = 16;
-    const TREE_TRUNK_DEPTH = 10;
+// TREES
+const TREE_PUNCH_DISTANCE = 30;
+const TREE_CELL_TILES = 8;
+const TREE_CHANCE_PERCENT = 45;
+const TREE_SIZE = 64;
+const TREE_TRUNK_HALF_WIDTH = 16;
+const TREE_TRUNK_DEPTH = 10;
 
-    const INVENTORY_SLOTS = 24;
-    const SAVE_KEY = "pixelPetGame.inventory.v2";
-    const LEGACY_SAVE_KEY = "pixelPetGame.eggsAndInventory.v1";
+// TREE PUNCH ANIMATION
+const TREE_PUNCH_GIF = "trees/tree-punch.gif";
+const TREE_PUNCH_DURATION = 0.63;
 
-    // Object drop-shadow
-    function drawShadow(ctx, x, y, width, height, options = {}) {
-        const {
-            enabled = true,
-            opacity = 0.25,
-            scale = 0.7,
-            offsetX = 0,
-            offsetY = -2
-        } = options;
-    
-        if (!enabled) return;
-    
-        ctx.save();
-        ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
-    
-        ctx.beginPath();
-        ctx.ellipse(
-            x + width / 2 + offsetX,
-            y + height + offsetY,
-            (width * scale) / 2,
-            Math.max(1, height * 0.12),
-            0,
-            0,
-            Math.PI * 2
-        );
-        ctx.fill();
-    
-        ctx.restore();
-    }
+// INVENTORY
+const INVENTORY_SLOTS = 24;
+const SAVE_KEY = "pixelPetGame.inventory.v2";
+const LEGACY_SAVE_KEY = "pixelPetGame.eggsAndInventory.v1";
 
-    // ============================================================
-    // ITEM DEFINITIONS
-    // ============================================================
-    const ITEM_DEFINITIONS = {
-      "basic-egg": {
+// ============================================================
+// SHADOWS
+// ============================================================
+
+function drawShadow(ctx, x, y, width, height, options = {}) {
+    const {
+        enabled = true,
+        opacity = 0.25,
+        scale = 0.7,
+        offsetX = 0,
+        offsetY = -2
+    } = options;
+
+    if (!enabled) return;
+
+    ctx.save();
+    ctx.fillStyle = `rgba(0, 0, 0, ${opacity})`;
+    ctx.beginPath();
+
+    ctx.ellipse(
+        x + width / 2 + offsetX,
+        y + height + offsetY,
+        width * scale / 2,
+        Math.max(1, height * 0.12),
+        0,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fill();
+    ctx.restore();
+}
+
+// ============================================================
+// ITEMS
+// ============================================================
+
+const ITEM_DEFINITIONS = {
+    "basic-egg": {
         name: "Basic Egg",
         icon: "items/basic-egg.png",
         maxStack: 52
-      }
-    };
+    }
+};
 
-    function getItemDefinition(itemId) {
-      return ITEM_DEFINITIONS[itemId] || {
+function getItemDefinition(itemId) {
+    return ITEM_DEFINITIONS[itemId] || {
         name: itemId
-          .replace(/[-_]/g, " ")
-          .replace(/\b\w/g, char => char.toUpperCase()),
+            .replace(/[-_]/g, " ")
+            .replace(/\b\w/g, char => char.toUpperCase()),
         icon: `items/${itemId}.png`,
         maxStack: 52
-      };
-    }
-
-    // ============================================================
-    // SETUP
-    // ============================================================
-    const canvas = document.getElementById("game");
-    const ctx = canvas.getContext("2d", { alpha: false });
-    const keys = new Set();
-
-    const ui = {
-      pickup: document.getElementById("pickup-prompt"),
-      toast: document.getElementById("toast"),
-      screen: document.getElementById("inventory-screen"),
-      grid: document.getElementById("inventory-grid"),
-      description: document.getElementById("inventory-description")
     };
+}
 
-    const player = {
-      x: -16,
-      y: -16,
-      width: 12,
-      height: 6,
-      facing: "down",
-      forwardSide: "left",
-      moving: false,
-      walkDistance: 0,
-      walkFrame: 0,
-      shadow: true
-    };
+// ============================================================
+// SETUP
+// ============================================================
 
-    // ============================================================
-    // INVENTORY DATA
-    // ============================================================
-    const inventory = Array(INVENTORY_SLOTS).fill(null);
-    const collectedEggs = new Set();
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d", { alpha: false });
+const keys = new Set();
 
-    let inventoryOpen = false;
-    let selectedSlot = -1;
-    let gameTime = 0;
-    let notificationTime = 0;
+const ui = {
+    pickup: document.getElementById("pickup-prompt"),
+    toast: document.getElementById("toast"),
+    screen: document.getElementById("inventory-screen"),
+    grid: document.getElementById("inventory-grid"),
+    description: document.getElementById("inventory-description")
+};
 
-    function showMessage(message) {
-      ui.toast.textContent = message;
-      ui.toast.hidden = false;
-      notificationTime = 2.4;
-    }
+const player = {
+    x: -16,
+    y: -16,
+    width: 12,
+    height: 6,
+    facing: "down",
+    forwardSide: "left",
+    moving: false,
+    walkDistance: 0,
+    walkFrame: 0,
+    shadow: true
+};
 
-    function saveGame() {
-      try {
+const inventory = Array(INVENTORY_SLOTS).fill(null);
+const collectedEggs = new Set();
+
+let inventoryOpen = false;
+let selectedSlot = -1;
+let gameTime = 0;
+let notificationTime = 0;
+
+// ============================================================
+// NOTIFICATIONS
+// ============================================================
+
+function showMessage(message) {
+    ui.toast.textContent = message;
+    ui.toast.hidden = false;
+    notificationTime = 2.4;
+}
+
+// ============================================================
+// SAVE / LOAD
+// ============================================================
+
+function saveGame() {
+    try {
         localStorage.setItem(SAVE_KEY, JSON.stringify({
-          inventory,
-          collectedEggs: Array.from(collectedEggs)
+            inventory,
+            collectedEggs: Array.from(collectedEggs)
         }));
-      } catch (error) {
+    } catch (error) {
         console.warn("Unable to save game:", error);
-      }
     }
+}
 
-    function loadGame() {
-      try {
+function loadGame() {
+    try {
         let raw = localStorage.getItem(SAVE_KEY);
         const isLegacy = !raw;
 
         if (!raw) {
-          raw = localStorage.getItem(LEGACY_SAVE_KEY);
+            raw = localStorage.getItem(LEGACY_SAVE_KEY);
         }
 
         if (!raw) return;
@@ -429,165 +443,156 @@
         const data = JSON.parse(raw);
 
         if (Array.isArray(data.inventory)) {
-          for (let i = 0; i < INVENTORY_SLOTS; i++) {
-            const old = data.inventory[i];
-            if (!old) continue;
+            for (let i = 0; i < INVENTORY_SLOTS; i++) {
+                const old = data.inventory[i];
+                if (!old) continue;
 
-            const oldId = old.itemId || old.type;
-            const itemId = oldId === "egg"
-              ? "basic-egg"
-              : oldId;
+                const oldId = old.itemId || old.type;
+                const itemId = oldId === "egg"
+                    ? "basic-egg"
+                    : oldId;
 
-            if (
-              typeof itemId !== "string" ||
-              !/^[a-z0-9_-]+$/i.test(itemId)
-            ) {
-              continue;
+                if (
+                    typeof itemId !== "string" ||
+                    !/^[a-z0-9_-]+$/i.test(itemId)
+                ) continue;
+
+                const limit = getItemDefinition(itemId).maxStack;
+
+                if (
+                    !Number.isInteger(old.count) ||
+                    old.count < 1 ||
+                    old.count > limit
+                ) continue;
+
+                inventory[i] = {
+                    itemId,
+                    count: old.count
+                };
             }
-
-            const limit = getItemDefinition(itemId).maxStack;
-
-            if (
-              !Number.isInteger(old.count) ||
-              old.count < 1 ||
-              old.count > limit
-            ) {
-              continue;
-            }
-
-            inventory[i] = {
-              itemId,
-              count: old.count
-            };
-          }
         }
 
         if (Array.isArray(data.collectedEggs)) {
-          for (const key of data.collectedEggs) {
-            if (typeof key === "string") {
-              collectedEggs.add(key);
+            for (const key of data.collectedEggs) {
+                if (typeof key === "string") {
+                    collectedEggs.add(key);
+                }
             }
-          }
         }
 
         if (isLegacy) saveGame();
-      } catch (error) {
-        console.warn("Unable to load saved game:", error);
-      }
-    }
 
-    // ============================================================
-    // GENERAL-PURPOSE INVENTORY SYSTEM
-    // ============================================================
-    function addInventoryItem(itemId, amount = 1) {
-      if (
+    } catch (error) {
+        console.warn("Unable to load saved game:", error);
+    }
+}
+
+// ============================================================
+// INVENTORY SYSTEM
+// ============================================================
+
+function addInventoryItem(itemId, amount = 1) {
+    if (
         typeof itemId !== "string" ||
         !/^[a-z0-9_-]+$/i.test(itemId)
-      ) {
+    ) return false;
+
+    if (!Number.isInteger(amount) || amount <= 0) {
         return false;
-      }
+    }
 
-      if (!Number.isInteger(amount) || amount <= 0) {
-        return false;
-      }
+    const limit = getItemDefinition(itemId).maxStack;
+    let capacity = 0;
 
-      const limit = getItemDefinition(itemId).maxStack;
-      let capacity = 0;
-
-      for (const slot of inventory) {
+    for (const slot of inventory) {
         if (!slot) {
-          capacity += limit;
+            capacity += limit;
         } else if (slot.itemId === itemId) {
-          capacity += Math.max(0, limit - slot.count);
+            capacity += Math.max(0, limit - slot.count);
         }
-      }
+    }
 
-      if (capacity < amount) return false;
+    if (capacity < amount) return false;
 
-      // Fill existing stacks first.
-      for (const slot of inventory) {
+    for (const slot of inventory) {
         if (amount === 0) break;
         if (!slot || slot.itemId !== itemId) continue;
 
-        const moved = Math.min(
-          limit - slot.count,
-          amount
-        );
-
+        const moved = Math.min(limit - slot.count, amount);
         slot.count += moved;
         amount -= moved;
-      }
+    }
 
-      // Then use empty inventory slots.
-      for (let i = 0; i < inventory.length && amount > 0; i++) {
+    for (let i = 0; i < inventory.length && amount > 0; i++) {
         if (inventory[i]) continue;
 
         const moved = Math.min(limit, amount);
 
         inventory[i] = {
-          itemId,
-          count: moved
+            itemId,
+            count: moved
         };
 
         amount -= moved;
-      }
-
-      saveGame();
-      renderInventory();
-      return true;
     }
 
-    function moveInventoryItem(from, to) {
-      if (from === to || !inventory[from]) return;
+    saveGame();
+    renderInventory();
 
-      const first = inventory[from];
-      const second = inventory[to];
+    return true;
+}
 
-      if (second && second.itemId === first.itemId) {
+function moveInventoryItem(from, to) {
+    if (from === to || !inventory[from]) return;
+
+    const first = inventory[from];
+    const second = inventory[to];
+
+    if (second && second.itemId === first.itemId) {
         const maxStack = getItemDefinition(first.itemId).maxStack;
+
         const transfer = Math.min(
-          maxStack - second.count,
-          first.count
+            maxStack - second.count,
+            first.count
         );
 
         second.count += transfer;
         first.count -= transfer;
 
         if (first.count === 0) {
-          inventory[from] = null;
+            inventory[from] = null;
         }
-      } else {
+    } else {
         inventory[from] = second;
         inventory[to] = first;
-      }
-
-      saveGame();
     }
 
-    function clickInventorySlot(index) {
-      if (selectedSlot === -1) {
+    saveGame();
+}
+
+function clickInventorySlot(index) {
+    if (selectedSlot === -1) {
         if (inventory[index]) {
-          selectedSlot = index;
+            selectedSlot = index;
         }
-      } else if (selectedSlot === index) {
+    } else if (selectedSlot === index) {
         selectedSlot = -1;
-      } else {
+    } else {
         moveInventoryItem(selectedSlot, index);
         selectedSlot = -1;
-      }
-
-      renderInventory();
     }
 
-    function renderInventory() {
-      const fragment = document.createDocumentFragment();
+    renderInventory();
+}
 
-      for (let i = 0; i < INVENTORY_SLOTS; i++) {
+function renderInventory() {
+    const fragment = document.createDocumentFragment();
+
+    for (let i = 0; i < INVENTORY_SLOTS; i++) {
         const button = document.createElement("button");
 
-        button.className =
-          "inventory-slot" +
-          (selectedSlot === i ? " selected" : "");
+        button.className = "inventory-slot" +
+            (selectedSlot === i ? " selected" : "");
 
         button.type = "button";
         button.setAttribute("aria-label", `Slot ${i + 1}`);
@@ -595,465 +600,445 @@
         const slot = inventory[i];
 
         if (slot) {
-          const def = getItemDefinition(slot.itemId);
+            const def = getItemDefinition(slot.itemId);
 
-          button.title = `${def.name} x${slot.count}`;
-          button.setAttribute(
-            "aria-label",
-            `${def.name} x${slot.count}, slot ${i + 1}`
-          );
+            button.title = `${def.name} x${slot.count}`;
+            button.setAttribute(
+                "aria-label",
+                `${def.name} x${slot.count}, slot ${i + 1}`
+            );
 
-          const icon = document.createElement("img");
+            const icon = document.createElement("img");
 
-          icon.className = "item-icon";
-          icon.src = def.icon;
-          icon.alt = "";
-          icon.draggable = false;
+            icon.className = "item-icon";
+            icon.src = def.icon;
+            icon.alt = "";
+            icon.draggable = false;
 
-          icon.addEventListener("error", () => {
-            icon.remove();
+            icon.addEventListener("error", () => {
+                icon.remove();
 
-            const fallback = document.createElement("span");
-            fallback.textContent = def.name
-              .substring(0, 2)
-              .toUpperCase();
+                const fallback = document.createElement("span");
+                fallback.textContent = def.name
+                    .substring(0, 2)
+                    .toUpperCase();
 
-            button.appendChild(fallback);
-          }, { once: true });
+                button.appendChild(fallback);
+            }, { once: true });
 
-          button.appendChild(icon);
+            button.appendChild(icon);
 
-          if (slot.count > 1) {
-            const count = document.createElement("span");
+            if (slot.count > 1) {
+                const count = document.createElement("span");
 
-            count.className = "item-quantity";
-            count.textContent = String(slot.count);
+                count.className = "item-quantity";
+                count.textContent = String(slot.count);
 
-            button.appendChild(count);
-          }
+                button.appendChild(count);
+            }
         }
 
         button.addEventListener(
-          "click",
-          () => clickInventorySlot(i)
+            "click",
+            () => clickInventorySlot(i)
         );
 
         fragment.appendChild(button);
-      }
+    }
 
-      ui.grid.replaceChildren(fragment);
+    ui.grid.replaceChildren(fragment);
 
-      const selected = inventory[selectedSlot];
+    const selected = inventory[selectedSlot];
 
-      ui.description.textContent = selected
+    ui.description.textContent = selected
         ? `${getItemDefinition(selected.itemId).name} ×${selected.count}`
         : `${inventory.filter(Boolean).length} / ${INVENTORY_SLOTS} slots used`;
-    }
+}
 
-    function toggleInventory(forceOpen = !inventoryOpen) {
-      inventoryOpen = forceOpen;
+function toggleInventory(forceOpen = !inventoryOpen) {
+    inventoryOpen = forceOpen;
 
-      ui.screen.hidden = !inventoryOpen;
-      ui.pickup.hidden = true;
+    ui.screen.hidden = !inventoryOpen;
+    ui.pickup.hidden = true;
 
-      keys.clear();
+    keys.clear();
 
-      player.moving = false;
-      player.walkDistance = 0;
-      player.walkFrame = 0;
-      selectedSlot = -1;
+    player.moving = false;
+    player.walkDistance = 0;
+    player.walkFrame = 0;
+    selectedSlot = -1;
 
-      if (inventoryOpen) {
+    if (inventoryOpen) {
         renderInventory();
-      }
     }
+}
 
-    loadGame();
-    renderInventory();
+loadGame();
+renderInventory();
 
-    // ============================================================
-    // LOAD TEXTURES
-    // ============================================================
-    function loadImage(path) {
-      const img = new Image();
+// ============================================================
+// LOAD TEXTURES
+// ============================================================
 
-      img.onerror = () => {
+function loadImage(path) {
+    const img = new Image();
+
+    img.onerror = () => {
         console.error("Could not load image:", path);
-      };
+    };
 
-      img.src = path;
-      return img;
-    }
+    img.src = path;
+    return img;
+}
 
-    function imageReady(img) {
-      return img && img.complete && img.naturalWidth > 0;
-    }
+function imageReady(img) {
+    return img && img.complete && img.naturalWidth > 0;
+}
 
-    const pedestalTexture = loadImage(
-      "tiles/pedestal-vacant.png"
-    );
+const pedestalTexture = loadImage(
+    "tiles/pedestal-vacant.png"
+);
 
-    const grassTexture = loadImage(
-      "tiles/grass-full.png"
-    );
+const grassTexture = loadImage(
+    "tiles/grass-full.png"
+);
 
-    const treeTexture = loadImage("trees/tree-1.png");
+const treeTexture = loadImage(
+    "trees/tree-1.png"
+);
 
-    const basicEggTexture = loadImage(
-      ITEM_DEFINITIONS["basic-egg"].icon
-    );
+const basicEggTexture = loadImage(
+    ITEM_DEFINITIONS["basic-egg"].icon
+);
 
-    // ============================================================
-    // PLAYER SPRITES
-    // ============================================================
-    const maleIdleDown = loadImage(
-      "characters/male/male-idle-forward.png"
-    );
+// ============================================================
+// PLAYER SPRITES
+// ============================================================
 
-    const maleWalkingDown1 = loadImage(
-      "characters/male/male-forward-walking-1.png"
-    );
+const maleIdleDown = loadImage(
+    "characters/male/male-idle-forward.png"
+);
 
-    const maleWalkingDown2 = loadImage(
-      "characters/male/male-forward-walking-2.png"
-    );
+const maleWalkingDown1 = loadImage(
+    "characters/male/male-forward-walking-1.png"
+);
 
-    const maleIdleDownRight = loadImage(
-      "characters/male/male-forward-idle-right.png"
-    );
+const maleWalkingDown2 = loadImage(
+    "characters/male/male-forward-walking-2.png"
+);
 
-    const maleWalkingDownRight1 = loadImage(
-      "characters/male/male-forward-walking-1-right.png"
-    );
+const maleIdleDownRight = loadImage(
+    "characters/male/male-forward-idle-right.png"
+);
 
-    const maleWalkingDownRight2 = loadImage(
-      "characters/male/male-forward-walking-2-right.png"
-    );
+const maleWalkingDownRight1 = loadImage(
+    "characters/male/male-forward-walking-1-right.png"
+);
 
-    const maleIdleUp = loadImage(
-      "characters/male/male-backward-idle.png"
-    );
+const maleWalkingDownRight2 = loadImage(
+    "characters/male/male-forward-walking-2-right.png"
+);
 
-    const maleWalkingUp1 = loadImage(
-      "characters/male/male-backward-walking-1.png"
-    );
+const maleIdleUp = loadImage(
+    "characters/male/male-backward-idle.png"
+);
 
-    const maleWalkingUp2 = loadImage(
-      "characters/male/male-backward-walking-2.png"
-    );
+const maleWalkingUp1 = loadImage(
+    "characters/male/male-backward-walking-1.png"
+);
 
-    const maleIdleLeft = loadImage(
-      "characters/male/male-left-idle.png"
-    );
+const maleWalkingUp2 = loadImage(
+    "characters/male/male-backward-walking-2.png"
+);
 
-    const maleWalkingLeft1 = loadImage(
-      "characters/male/male-left-walking-1.png"
-    );
+const maleIdleLeft = loadImage(
+    "characters/male/male-left-idle.png"
+);
 
-    const maleWalkingLeft2 = loadImage(
-      "characters/male/male-left-walking-2.png"
-    );
+const maleWalkingLeft1 = loadImage(
+    "characters/male/male-left-walking-1.png"
+);
 
-    const maleIdleRight = loadImage(
-      "characters/male/male-right-idle.png"
-    );
+const maleWalkingLeft2 = loadImage(
+    "characters/male/male-left-walking-2.png"
+);
 
-    const maleWalkingRight1 = loadImage(
-      "characters/male/male-right-walking-1.png"
-    );
+const maleIdleRight = loadImage(
+    "characters/male/male-right-idle.png"
+);
 
-    const maleWalkingRight2 = loadImage(
-      "characters/male/male-right-walking-2.png"
-    );
+const maleWalkingRight1 = loadImage(
+    "characters/male/male-right-walking-1.png"
+);
 
-    const maleDownRunning1 = loadImage(
-      "characters/male/male-forward-running-1.png"
-    );
+const maleWalkingRight2 = loadImage(
+    "characters/male/male-right-walking-2.png"
+);
 
-    const maleDownRunning2 = loadImage(
-      "characters/male/male-forward-running-2.png"
-    );
+const maleDownRunning1 = loadImage(
+    "characters/male/male-forward-running-1.png"
+);
 
-    const maleDownRunningRight1 = loadImage(
-      "characters/male/male-forward-running-right-1.png"
-    );
+const maleDownRunning2 = loadImage(
+    "characters/male/male-forward-running-2.png"
+);
 
-    const maleDownRunningRight2 = loadImage(
-      "characters/male/male-forward-running-right-2.png"
-    );
+const maleDownRunningRight1 = loadImage(
+    "characters/male/male-forward-running-right-1.png"
+);
 
-    const maleUpRunning1 = loadImage(
-      "characters/male/male-backward-running-1.png"
-    );
+const maleDownRunningRight2 = loadImage(
+    "characters/male/male-forward-running-right-2.png"
+);
 
-    const maleUpRunning2 = loadImage(
-      "characters/male/male-backward-running-2.png"
-    );
+const maleUpRunning1 = loadImage(
+    "characters/male/male-backward-running-1.png"
+);
 
-    const maleRunningRight1 = loadImage(
-      "characters/male/male-right-running-1.png"
-    );
+const maleUpRunning2 = loadImage(
+    "characters/male/male-backward-running-2.png"
+);
 
-    const maleRunningRight2 = loadImage(
-      "characters/male/male-right-running-2.png"
-    );
+const maleRunningRight1 = loadImage(
+    "characters/male/male-right-running-1.png"
+);
 
-    const maleRunningLeft1 = loadImage(
-      "characters/male/male-left-running-1.png"
-    );
+const maleRunningRight2 = loadImage(
+    "characters/male/male-right-running-2.png"
+);
 
-    const maleRunningLeft2 = loadImage(
-      "characters/male/male-left-running-2.png"
-    );
+const maleRunningLeft1 = loadImage(
+    "characters/male/male-left-running-1.png"
+);
 
-    // ============================================================
-    // SPRITE GROUPS
-    // ============================================================
-    const playerSprites = {
-      downLeft: {
+const maleRunningLeft2 = loadImage(
+    "characters/male/male-left-running-2.png"
+);
+
+// ============================================================
+// SPRITE GROUPS
+// ============================================================
+
+const playerSprites = {
+    downLeft: {
         idle: maleIdleDown,
         walking: [maleWalkingDown1, maleWalkingDown2],
         running: [maleDownRunning1, maleDownRunning2]
-      },
+    },
 
-      downRight: {
+    downRight: {
         idle: maleIdleDownRight,
         walking: [maleWalkingDownRight1, maleWalkingDownRight2],
         running: [maleDownRunningRight1, maleDownRunningRight2]
-      },
+    },
 
-      up: {
+    up: {
         idle: maleIdleUp,
         walking: [maleWalkingUp1, maleWalkingUp2],
         running: [maleUpRunning1, maleUpRunning2]
-      },
+    },
 
-      left: {
+    left: {
         idle: maleIdleLeft,
         walking: [maleWalkingLeft1, maleWalkingLeft2],
         running: [maleRunningLeft1, maleRunningLeft2]
-      },
+    },
 
-      right: {
+    right: {
         idle: maleIdleRight,
         walking: [maleWalkingRight1, maleWalkingRight2],
         running: [maleRunningRight1, maleRunningRight2]
-      }
-    };
-
-    // ============================================================
-    // RESIZE
-    // ============================================================
-    function resize() {
-      canvas.width = Math.ceil(
-        window.innerWidth / PIXEL_SCALE
-      );
-
-      canvas.height = Math.ceil(
-        window.innerHeight / PIXEL_SCALE
-      );
-
-      ctx.imageSmoothingEnabled = false;
     }
+};
 
-    window.addEventListener("resize", resize);
-    resize();
+// ============================================================
+// RESIZE
+// ============================================================
 
-    // ============================================================
-    // GROUND
-    // ============================================================
-    function hash(x, y) {
-      let h =
+function resize() {
+    canvas.width = Math.ceil(window.innerWidth / PIXEL_SCALE);
+    canvas.height = Math.ceil(window.innerHeight / PIXEL_SCALE);
+    ctx.imageSmoothingEnabled = false;
+}
+
+window.addEventListener("resize", resize);
+resize();
+
+// ============================================================
+// GROUND HASH
+// ============================================================
+
+function hash(x, y) {
+    let h =
         Math.imul(x, 374761393) +
         Math.imul(y, 668265263);
 
-      h = Math.imul(
+    h = Math.imul(
         h ^ (h >>> 13),
         1274126177
-      );
+    );
 
-      return (h ^ (h >>> 16)) >>> 0;
-    }
+    return (h ^ (h >>> 16)) >>> 0;
+}
 
-    function drawGround(cameraX, cameraY) {
-      ctx.fillStyle = "#79a66e";
+// ============================================================
+// DRAW GROUND
+// ============================================================
 
-      ctx.fillRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
+function drawGround(cameraX, cameraY) {
+    ctx.fillStyle = "#79a66e";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      const left = Math.floor(cameraX / TILE_SIZE);
-      const top = Math.floor(cameraY / TILE_SIZE);
+    const left = Math.floor(cameraX / TILE_SIZE);
+    const top = Math.floor(cameraY / TILE_SIZE);
 
-      const right = Math.floor(
+    const right = Math.floor(
         (cameraX + canvas.width) / TILE_SIZE
-      ) + 1;
+    ) + 1;
 
-      const bottom = Math.floor(
+    const bottom = Math.floor(
         (cameraY + canvas.height) / TILE_SIZE
-      ) + 1;
+    ) + 1;
 
-      for (let ty = top; ty <= bottom; ty++) {
+    for (let ty = top; ty <= bottom; ty++) {
         for (let tx = left; tx <= right; tx++) {
-          const px = Math.floor(
-            tx * TILE_SIZE - cameraX
-          );
+            const px = Math.floor(tx * TILE_SIZE - cameraX);
+            const py = Math.floor(ty * TILE_SIZE - cameraY);
+            const n = hash(tx, ty);
 
-          const py = Math.floor(
-            ty * TILE_SIZE - cameraY
-          );
-
-          const n = hash(tx, ty);
-
-          if (imageReady(grassTexture)) {
-            ctx.drawImage(
-              grassTexture,
-              px,
-              py,
-              TILE_SIZE + 30,
-              TILE_SIZE + 30
-            );
-          }
-
-          if (n % 13 === 0) {
-            ctx.fillStyle = "#98ba7b";
-            ctx.fillRect(px + 6, py + 9, 2, 3);
-          }
-
-          if (n % 23 === 0) {
-            ctx.fillStyle = "#648e5e";
-            ctx.fillRect(px + 11, py + 12, 2, 2);
-          }
-        }
-      }
-    }
-
-    // ============================================================
-    // PLOTS AND PEDESTALS
-    // ============================================================
-    function drawPlots(cameraX, cameraY, foreground = false) {
-      const firstX = Math.floor(
-        (cameraX - PLOT_ORIGIN_X - PLOT_WIDTH) / PLOT_STEP_X
-      );
-
-      const lastX = Math.floor(
-        (cameraX + canvas.width - PLOT_ORIGIN_X) / PLOT_STEP_X
-      );
-
-      const firstY = Math.floor(
-        (cameraY - PLOT_ORIGIN_Y - PLOT_HEIGHT) / PLOT_STEP_Y
-      );
-
-      const lastY = Math.floor(
-        (cameraY + canvas.height - PLOT_ORIGIN_Y) / PLOT_STEP_Y
-      );
-
-      const pedestalSize = Math.round(
-        TILE_SIZE * PEDESTAL_SCALE
-      );
-
-      for (let plotY = firstY; plotY <= lastY; plotY++) {
-        for (let plotX = firstX; plotX <= lastX; plotX++) {
-          const worldX =
-            PLOT_ORIGIN_X + plotX * PLOT_STEP_X;
-
-          const worldY =
-            PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y;
-
-          const x = Math.floor(worldX - cameraX);
-          const y = Math.floor(worldY - cameraY);
-
-          if (!foreground) {
-            ctx.fillStyle = PLOT_COLOR;
-
-            ctx.fillRect(
-              x,
-              y,
-              PLOT_WIDTH,
-              PLOT_HEIGHT
-            );
-          }
-
-          if (!imageReady(pedestalTexture)) {
-            continue;
-          }
-
-          for (let row = 0; row < PLOT_ROWS; row++) {
-            for (let col = 0; col < PLOT_COLUMNS; col++) {
-              const tileX = (
-                PLOT_PADDING + col * PEDESTAL_STEP
-              ) * TILE_SIZE;
-
-              const tileY = (
-                PLOT_PADDING + row * PEDESTAL_STEP
-              ) * TILE_SIZE;
-
-              const pedestalFeetY =
-                worldY + tileY + TILE_SIZE;
-
-              if ((pedestalFeetY > player.y) !== foreground) {
-                continue;
-              }
-
-              const px = Math.round(
-                x + tileX -
-                (pedestalSize - TILE_SIZE) / 2
-              );
-
-              const py = Math.round(
-                y + tileY + TILE_SIZE - pedestalSize
-              );
-
-              ctx.drawImage(
-                pedestalTexture,
-                px,
-                py,
-                pedestalSize,
-                pedestalSize
-              );
+            if (imageReady(grassTexture)) {
+                ctx.drawImage(
+                    grassTexture,
+                    px, py,
+                    TILE_SIZE + 30,
+                    TILE_SIZE + 30
+                );
             }
-          }
+
+            if (n % 13 === 0) {
+                ctx.fillStyle = "#98ba7b";
+                ctx.fillRect(px + 6, py + 9, 2, 3);
+            }
+
+            if (n % 23 === 0) {
+                ctx.fillStyle = "#648e5e";
+                ctx.fillRect(px + 11, py + 12, 2, 2);
+            }
         }
-      }
     }
+}
 
-    // ============================================================
-    // PEDESTAL COLLISION
-    // ============================================================
-    function isPositionSolid(worldX, worldY) {
-      const plotX = Math.floor(
+// ============================================================
+// DRAW PLOTS AND PEDESTALS
+// ============================================================
+
+function drawPlots(cameraX, cameraY, foreground = false) {
+    const firstX = Math.floor(
+        (cameraX - PLOT_ORIGIN_X - PLOT_WIDTH) / PLOT_STEP_X
+    );
+
+    const lastX = Math.floor(
+        (cameraX + canvas.width - PLOT_ORIGIN_X) / PLOT_STEP_X
+    );
+
+    const firstY = Math.floor(
+        (cameraY - PLOT_ORIGIN_Y - PLOT_HEIGHT) / PLOT_STEP_Y
+    );
+
+    const lastY = Math.floor(
+        (cameraY + canvas.height - PLOT_ORIGIN_Y) / PLOT_STEP_Y
+    );
+
+    const pedestalSize = Math.round(
+        TILE_SIZE * PEDESTAL_SCALE
+    );
+
+    for (let plotY = firstY; plotY <= lastY; plotY++) {
+        for (let plotX = firstX; plotX <= lastX; plotX++) {
+            const worldX = PLOT_ORIGIN_X + plotX * PLOT_STEP_X;
+            const worldY = PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y;
+
+            const x = Math.floor(worldX - cameraX);
+            const y = Math.floor(worldY - cameraY);
+
+            if (!foreground) {
+                ctx.fillStyle = PLOT_COLOR;
+                ctx.fillRect(x, y, PLOT_WIDTH, PLOT_HEIGHT);
+            }
+
+            if (!imageReady(pedestalTexture)) continue;
+
+            for (let row = 0; row < PLOT_ROWS; row++) {
+                for (let col = 0; col < PLOT_COLUMNS; col++) {
+                    const tileX = (
+                        PLOT_PADDING + col * PEDESTAL_STEP
+                    ) * TILE_SIZE;
+
+                    const tileY = (
+                        PLOT_PADDING + row * PEDESTAL_STEP
+                    ) * TILE_SIZE;
+
+                    const pedestalFeetY =
+                        worldY + tileY + TILE_SIZE;
+
+                    if ((pedestalFeetY > player.y) !== foreground) {
+                        continue;
+                    }
+
+                    const px = Math.round(
+                        x + tileX -
+                        (pedestalSize - TILE_SIZE) / 2
+                    );
+
+                    const py = Math.round(
+                        y + tileY + TILE_SIZE - pedestalSize
+                    );
+
+                    ctx.drawImage(
+                        pedestalTexture,
+                        px, py,
+                        pedestalSize,
+                        pedestalSize
+                    );
+                }
+            }
+        }
+    }
+}
+
+// ============================================================
+// PEDESTAL COLLISION
+// ============================================================
+
+function isPositionSolid(worldX, worldY) {
+    const plotX = Math.floor(
         (worldX - PLOT_ORIGIN_X) / PLOT_STEP_X
-      );
+    );
 
-      const plotY = Math.floor(
+    const plotY = Math.floor(
         (worldY - PLOT_ORIGIN_Y) / PLOT_STEP_Y
-      );
+    );
 
-      const localX = worldX - (
+    const localX = worldX - (
         PLOT_ORIGIN_X + plotX * PLOT_STEP_X
-      );
+    );
 
-      const localY = worldY - (
+    const localY = worldY - (
         PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y
-      );
+    );
 
-      if (
+    if (
         localX >= PLOT_WIDTH ||
         localY >= PLOT_HEIGHT
-      ) {
-        return false;
-      }
+    ) return false;
 
-      const colTile =
+    const colTile =
         Math.floor(localX / TILE_SIZE) - PLOT_PADDING;
 
-      const rowTile =
+    const rowTile =
         Math.floor(localY / TILE_SIZE) - PLOT_PADDING;
 
-      const isPedestal =
+    const isPedestal =
         colTile >= 0 &&
         colTile < PLOT_COLUMNS * PEDESTAL_STEP &&
         rowTile >= 0 &&
@@ -1061,139 +1046,316 @@
         colTile % PEDESTAL_STEP === 0 &&
         rowTile % PEDESTAL_STEP === 0;
 
-      if (!isPedestal) return false;
+    if (!isPedestal) return false;
 
-      return localY % TILE_SIZE >= (
+    return localY % TILE_SIZE >= (
         TILE_SIZE - PEDESTAL_HITBOX_HEIGHT
-      );
+    );
+}
+
+// ============================================================
+// PLOT PROXIMITY
+// ============================================================
+
+function isNearPlot(x, y, margin = 10) {
+    const localX = (
+        (x - PLOT_ORIGIN_X) % PLOT_STEP_X +
+        PLOT_STEP_X
+    ) % PLOT_STEP_X;
+
+    const localY = (
+        (y - PLOT_ORIGIN_Y) % PLOT_STEP_Y +
+        PLOT_STEP_Y
+    ) % PLOT_STEP_Y;
+
+    const nearPlotX =
+        localX <= PLOT_WIDTH + margin ||
+        localX >= PLOT_STEP_X - margin;
+
+    const nearPlotY =
+        localY <= PLOT_HEIGHT + margin ||
+        localY >= PLOT_STEP_Y - margin;
+
+    return nearPlotX && nearPlotY;
+}
+
+// ============================================================
+// TREES
+// ============================================================
+
+// Cache tree objects so each tree has independent animation state.
+const treeCache = new Map();
+
+function getTreeInCell(cx, cy) {
+    const key = `${cx},${cy}`;
+
+    if (treeCache.has(key)) {
+        return treeCache.get(key);
     }
 
-    // ============================================================
-    // TREES
-    // ============================================================
-    // Cache trees so their animation state persists between frames.
-    const treeCache = new Map();
+    const seed = hash(cx + 17031, cy - 90217);
 
-    function getTreeInCell(cx, cy) {
-      const key = `${cx},${cy}`;
+    if (seed % 100 >= TREE_CHANCE_PERCENT) {
+        return null;
+    }
 
-      if (treeCache.has(key)) {
-        return treeCache.get(key);
-      }
-
-      const seed = hash(cx + 17031, cy - 90217);
-      if (seed % 100 >= TREE_CHANCE_PERCENT) return null;
-
-      const tx = cx * TREE_CELL_TILES + 1 +
+    const tx =
+        cx * TREE_CELL_TILES + 1 +
         (hash(cx + 317, cy + 991) % (TREE_CELL_TILES - 2));
 
-      const ty = cy * TREE_CELL_TILES + 1 +
+    const ty =
+        cy * TREE_CELL_TILES + 1 +
         (hash(cx - 733, cy + 1441) % (TREE_CELL_TILES - 2));
 
-      const x = tx * TILE_SIZE + TILE_SIZE / 2;
-      const y = ty * TILE_SIZE + TILE_SIZE / 2;
+    const x = tx * TILE_SIZE + TILE_SIZE / 2;
+    const y = ty * TILE_SIZE + TILE_SIZE / 2;
 
-      // Leave plots and their immediate surroundings empty.
-      if (isNearPlot(x, y, TREE_SIZE / 2 + 6)) return null;
-
-      // Do not obstruct initial spawn.
-      if (Math.hypot(x + 16, y + 16) < 48) return null;
-
-      const tree = {
-        x,
-        y,
-        shakeOffsetY: 0,
-        punching: false
-      };
-
-      treeCache.set(key, tree);
-
-      return tree;
+    if (isNearPlot(x, y, TREE_SIZE / 2 + 6)) {
+        return null;
     }
 
-    function getTreesInBounds(left, top, right, bottom) {
-      const cellSize = TREE_CELL_TILES * TILE_SIZE;
-      const trees = [];
+    if (Math.hypot(x + 16, y + 16) < 48) {
+        return null;
+    }
 
-      for (
+    const tree = {
+        x,
+        y,
+        punching: false,
+        animation: null
+    };
+
+    treeCache.set(key, tree);
+
+    return tree;
+}
+
+function getTreesInBounds(left, top, right, bottom) {
+    const cellSize = TREE_CELL_TILES * TILE_SIZE;
+    const trees = [];
+
+    for (
         let cy = Math.floor(top / cellSize);
         cy <= Math.floor(bottom / cellSize);
         cy++
-      ) {
+    ) {
         for (
-          let cx = Math.floor(left / cellSize);
-          cx <= Math.floor(right / cellSize);
-          cx++
+            let cx = Math.floor(left / cellSize);
+            cx <= Math.floor(right / cellSize);
+            cx++
         ) {
-          const tree = getTreeInCell(cx, cy);
+            const tree = getTreeInCell(cx, cy);
 
-          if (
-            tree &&
-            tree.x >= left &&
-            tree.x <= right &&
-            tree.y >= top &&
-            tree.y <= bottom
-          ) {
-            trees.push(tree);
-          }
+            if (
+                tree &&
+                tree.x >= left &&
+                tree.x <= right &&
+                tree.y >= top &&
+                tree.y <= bottom
+            ) {
+                trees.push(tree);
+            }
         }
-      }
-
-      return trees;
     }
 
-    function isTreeSolid(x, y) {
-      const cellSize = TREE_CELL_TILES * TILE_SIZE;
-      const cx = Math.floor(x / cellSize);
-      const cy = Math.floor(y / cellSize);
+    return trees;
+}
 
-      // Check neighboring cells as well.
-      for (let dy = -1; dy <= 1; dy++) {
+// ============================================================
+// TREE COLLISION
+// ============================================================
+
+function isTreeSolid(x, y) {
+    const cellSize = TREE_CELL_TILES * TILE_SIZE;
+    const cx = Math.floor(x / cellSize);
+    const cy = Math.floor(y / cellSize);
+
+    for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
-          const tree = getTreeInCell(cx + dx, cy + dy);
+            const tree = getTreeInCell(cx + dx, cy + dy);
 
-          if (!tree) continue;
+            if (!tree) continue;
 
-          if (
-            Math.abs(x - tree.x) <= TREE_TRUNK_HALF_WIDTH &&
-            y >= tree.y - TREE_TRUNK_DEPTH &&
-            y <= tree.y
-          ) {
-            return true;
-          }
+            if (
+                Math.abs(x - tree.x) <= TREE_TRUNK_HALF_WIDTH &&
+                y >= tree.y - TREE_TRUNK_DEPTH &&
+                y <= tree.y
+            ) {
+                return true;
+            }
         }
-      }
-
-      return false;
     }
 
-    function drawTree(tree, cameraX, cameraY) {
-        if (!imageReady(treeTexture)) return;
-    
-        const x = Math.round(tree.x - cameraX);
-        const y = Math.round(tree.y - cameraY);
-    
-        drawShadow(ctx, x - 12, y - 4, 24, 10, {
-            opacity: 0.20,
-            scale: 1.15,
-            offsetX: 0,
-            offsetY: 0
-        });
-    
+    return false;
+}
+
+// ============================================================
+// TREE PUNCH ANIMATION
+// ============================================================
+
+function punchTree(tree) {
+    if (!tree || tree.punching) return;
+
+    tree.punching = true;
+
+    // Down sprites always shake right (original GIF).
+    // Up sprites always shake left (flipped GIF).
+    // Side sprites use which side of the tree the player is on.
+    let flip = false;
+
+    if (player.facing === "down") {
+        flip = false;
+    } else if (player.facing === "up") {
+        flip = true;
+    } else {
+        flip = player.x < tree.x;
+    }
+
+    const image = new Image();
+
+    const animation = {
+        image,
+        flip,
+        startedAt: null
+    };
+
+    tree.animation = animation;
+
+    image.onload = () => {
+        if (tree.animation === animation) {
+            animation.startedAt = gameTime;
+        }
+    };
+
+    image.onerror = () => {
+        console.error(
+            "Could not load tree punch GIF:",
+            TREE_PUNCH_GIF
+        );
+
+        if (tree.animation === animation) {
+            tree.animation = null;
+            tree.punching = false;
+        }
+    };
+
+    // Unique URL makes each punch start the GIF again.
+    image.src = TREE_PUNCH_GIF +
+        "?punch=" +
+        Date.now() +
+        "-" +
+        Math.random().toString(36).slice(2);
+}
+
+// ============================================================
+// FIND NEAREST TREE
+// ============================================================
+
+function getNearestTree() {
+    let nearest = null;
+
+    let nearestDistanceSq =
+        TREE_PUNCH_DISTANCE * TREE_PUNCH_DISTANCE;
+
+    const trees = getTreesInBounds(
+        player.x - TREE_PUNCH_DISTANCE,
+        player.y - TREE_PUNCH_DISTANCE,
+        player.x + TREE_PUNCH_DISTANCE,
+        player.y + TREE_PUNCH_DISTANCE
+    );
+
+    for (const tree of trees) {
+        const dx = tree.x - player.x;
+        const dy = tree.y - player.y;
+
+        const distanceSq = dx * dx + dy * dy;
+
+        if (distanceSq <= nearestDistanceSq) {
+            nearest = tree;
+            nearestDistanceSq = distanceSq;
+        }
+    }
+
+    return nearest;
+}
+
+// ============================================================
+// DRAW TREE
+// ============================================================
+
+function drawTree(tree, cameraX, cameraY) {
+    const x = Math.round(tree.x - cameraX);
+    const y = Math.round(tree.y - cameraY);
+
+    let texture = treeTexture;
+    let flip = false;
+
+    const animation = tree.animation;
+
+    if (animation) {
+        const elapsed = animation.startedAt === null
+            ? 0
+            : gameTime - animation.startedAt;
+
+        if (
+            animation.startedAt !== null &&
+            elapsed >= TREE_PUNCH_DURATION
+        ) {
+            // Return to the regular tree.
+            tree.animation = null;
+            tree.punching = false;
+        } else if (imageReady(animation.image)) {
+            texture = animation.image;
+            flip = animation.flip;
+        }
+    }
+
+    if (!imageReady(texture)) return;
+
+    // The shadow stays in place during the animation.
+    drawShadow(ctx, x - 12, y - 4, 24, 10, {
+        opacity: 0.20,
+        scale: 1.15,
+        offsetX: 0,
+        offsetY: 0
+    });
+
+    ctx.save();
+
+    if (flip) {
+        // Mirror the animated GIF horizontally.
+        ctx.translate(x, 0);
+        ctx.scale(-1, 1);
+
         ctx.drawImage(
-            treeTexture,
+            texture,
+            -TREE_SIZE / 2,
+            y - TREE_SIZE,
+            TREE_SIZE,
+            TREE_SIZE
+        );
+    } else {
+        ctx.drawImage(
+            texture,
             x - TREE_SIZE / 2,
-            y - TREE_SIZE + tree.shakeOffsetY,
+            y - TREE_SIZE,
             TREE_SIZE,
             TREE_SIZE
         );
     }
 
-    function canMoveTo(x, y) {
-      const halfW = player.width / 2;
-      const halfH = player.height / 2;
+    ctx.restore();
+}
 
-      return !(
+// ============================================================
+// PLAYER MOVEMENT COLLISION
+// ============================================================
+
+function canMoveTo(x, y) {
+    const halfW = player.width / 2;
+    const halfH = player.height / 2;
+
+    return !(
         isPositionSolid(x - halfW, y - halfH) ||
         isTreeSolid(x - halfW, y - halfH) ||
 
@@ -1205,646 +1367,597 @@
 
         isPositionSolid(x + halfW, y + halfH) ||
         isTreeSolid(x + halfW, y + halfH)
-      );
-    }
+    );
+}
 
-    // ============================================================
-    // RARE GROUND EGGS
-    // ============================================================
-    function isNearPlot(x, y, margin = 10) {
-      const localX = (
-        (x - PLOT_ORIGIN_X) % PLOT_STEP_X +
-        PLOT_STEP_X
-      ) % PLOT_STEP_X;
+// ============================================================
+// RARE GROUND EGGS
+// ============================================================
 
-      const localY = (
-        (y - PLOT_ORIGIN_Y) % PLOT_STEP_Y +
-        PLOT_STEP_Y
-      ) % PLOT_STEP_Y;
-
-      const nearPlotX =
-        localX <= PLOT_WIDTH + margin ||
-        localX >= PLOT_STEP_X - margin;
-
-      const nearPlotY =
-        localY <= PLOT_HEIGHT + margin ||
-        localY >= PLOT_STEP_Y - margin;
-
-      return nearPlotX && nearPlotY;
-    }
-
-    function getEggAtTile(tx, ty) {
-      if (
+function getEggAtTile(tx, ty) {
+    if (
         hash(tx + 839, ty - 1977) % EGG_RARITY !== 0
-      ) {
+    ) {
         return null;
-      }
-
-      const x = tx * TILE_SIZE + TILE_SIZE / 2;
-      const y = ty * TILE_SIZE + TILE_SIZE / 2;
-
-      if (isNearPlot(x, y)) return null;
-
-      const key = `${tx},${ty}`;
-
-      if (collectedEggs.has(key)) return null;
-
-      return { x, y, key };
     }
 
-    function getNearestEgg() {
-      const tx = Math.floor(player.x / TILE_SIZE);
-      const ty = Math.floor(player.y / TILE_SIZE);
+    const x = tx * TILE_SIZE + TILE_SIZE / 2;
+    const y = ty * TILE_SIZE + TILE_SIZE / 2;
 
-      let nearest = null;
+    if (isNearPlot(x, y)) return null;
 
-      let nearestDistanceSq =
+    const key = `${tx},${ty}`;
+
+    if (collectedEggs.has(key)) return null;
+
+    return { x, y, key };
+}
+
+function getNearestEgg() {
+    const tx = Math.floor(player.x / TILE_SIZE);
+    const ty = Math.floor(player.y / TILE_SIZE);
+
+    let nearest = null;
+
+    let nearestDistanceSq =
         EGG_PICKUP_DISTANCE * EGG_PICKUP_DISTANCE;
 
-      for (let y = ty - 2; y <= ty + 2; y++) {
+    for (let y = ty - 2; y <= ty + 2; y++) {
         for (let x = tx - 2; x <= tx + 2; x++) {
-          const egg = getEggAtTile(x, y);
+            const egg = getEggAtTile(x, y);
 
-          if (!egg) continue;
+            if (!egg) continue;
 
-          const dx = egg.x - player.x;
-          const dy = egg.y - player.y;
+            const dx = egg.x - player.x;
+            const dy = egg.y - player.y;
+            const distanceSq = dx * dx + dy * dy;
 
-          const distanceSq = dx * dx + dy * dy;
-
-          if (distanceSq <= nearestDistanceSq) {
-            nearest = egg;
-            nearestDistanceSq = distanceSq;
-          }
+            if (distanceSq <= nearestDistanceSq) {
+                nearest = egg;
+                nearestDistanceSq = distanceSq;
+            }
         }
-      }
-
-      return nearest;
     }
 
-    function collectNearbyEgg() {
-      const egg = getNearestEgg();
+    return nearest;
+}
 
-      if (!egg) return;
+function collectNearbyEgg() {
+    const egg = getNearestEgg();
 
-      if (!addInventoryItem("basic-egg", 1)) {
+    if (!egg) return;
+
+    if (!addInventoryItem("basic-egg", 1)) {
         showMessage("Your inventory is full!");
         return;
-      }
-
-      collectedEggs.add(egg.key);
-      saveGame();
-
-      showMessage("Picked up Basic Egg ×1");
     }
 
-    function drawEggs(cameraX, cameraY) {
-      const left = Math.floor(cameraX / TILE_SIZE) - 1;
-      const top = Math.floor(cameraY / TILE_SIZE) - 1;
+    collectedEggs.add(egg.key);
+    saveGame();
 
-      const right = Math.floor(
+    showMessage("Picked up Basic Egg ×1");
+}
+
+function drawEggs(cameraX, cameraY) {
+    const left = Math.floor(cameraX / TILE_SIZE) - 1;
+    const top = Math.floor(cameraY / TILE_SIZE) - 1;
+
+    const right = Math.floor(
         (cameraX + canvas.width) / TILE_SIZE
-      ) + 1;
+    ) + 1;
 
-      const bottom = Math.floor(
+    const bottom = Math.floor(
         (cameraY + canvas.height) / TILE_SIZE
-      ) + 1;
+    ) + 1;
 
-      for (let ty = top; ty <= bottom; ty++) {
+    for (let ty = top; ty <= bottom; ty++) {
         for (let tx = left; tx <= right; tx++) {
-          const egg = getEggAtTile(tx, ty);
+            const egg = getEggAtTile(tx, ty);
 
-          if (!egg) continue;
+            if (!egg) continue;
 
-          const x = Math.round(egg.x - cameraX);
-          const y = Math.round(egg.y - cameraY);
+            const x = Math.round(egg.x - cameraX);
+            const y = Math.round(egg.y - cameraY);
 
-          const bob = Math.round(
-            Math.sin(gameTime * 2.5 + tx) * 1.2
-          );
-
-          drawShadow(ctx, x - 8, y - 10, 16, 16, {
-            enabled: true,
-            opacity: 0.25,
-            scale: 0.75,
-            offsetY: 2
-          });
-
-          if (imageReady(basicEggTexture)) {
-            ctx.drawImage(
-              basicEggTexture,
-              x - 8,
-              y - 10 + bob,
-              16,
-              16
+            const bob = Math.round(
+                Math.sin(gameTime * 2.5 + tx) * 1.2
             );
-          }
 
-          const pulse =
-            Math.sin(gameTime * 3 + ty) > 0.5;
+            drawShadow(ctx, x - 8, y - 10, 16, 16, {
+                enabled: true,
+                opacity: 0.25,
+                scale: 0.75,
+                offsetY: 2
+            });
 
-          if (pulse) {
-            ctx.fillStyle = "#fff2a9";
-            ctx.fillRect(x + 9, y - 10 + bob, 2, 2);
-            ctx.fillRect(x + 10, y - 12 + bob, 1, 1);
-          }
+            if (imageReady(basicEggTexture)) {
+                ctx.drawImage(
+                    basicEggTexture,
+                    x - 8,
+                    y - 10 + bob,
+                    16,
+                    16
+                );
+            }
+
+            const pulse =
+                Math.sin(gameTime * 3 + ty) > 0.5;
+
+            if (pulse) {
+                ctx.fillStyle = "#fff2a9";
+
+                ctx.fillRect(
+                    x + 9,
+                    y - 10 + bob,
+                    2,
+                    2
+                );
+
+                ctx.fillRect(
+                    x + 10,
+                    y - 12 + bob,
+                    1,
+                    1
+                );
+            }
         }
-      }
+    }
+}
+
+// ============================================================
+// PLAYER SPRITE SELECTION
+// ============================================================
+
+function getPlayerSprite() {
+    let direction = player.facing;
+
+    if (direction === "down") {
+        direction = player.forwardSide === "right"
+            ? "downRight"
+            : "downLeft";
     }
 
-    // ============================================================
-    // PLAYER SPRITE SELECTION
-    // ============================================================
-    function getPlayerSprite() {
-      let direction = player.facing;
-
-      if (direction === "down") {
-        direction = player.forwardSide === "right"
-          ? "downRight"
-          : "downLeft";
-      }
-
-      const sprites =
+    const sprites =
         playerSprites[direction] || playerSprites.downLeft;
 
-      const running =
+    const running =
         keys.has("ShiftLeft") || keys.has("ShiftRight");
 
-      let preferred;
+    let preferred;
 
-      if (!player.moving) {
+    if (!player.moving) {
         preferred = sprites.idle;
-      } else if (running) {
+    } else if (running) {
         preferred = sprites.running[player.walkFrame];
-      } else {
+    } else {
         preferred = sprites.walking[player.walkFrame];
-      }
+    }
 
-      if (!imageReady(preferred)) {
+    if (!imageReady(preferred)) {
         preferred =
-          sprites.walking[player.walkFrame] || sprites.idle;
-      }
-
-      return preferred;
+            sprites.walking[player.walkFrame] || sprites.idle;
     }
 
-    // ============================================================
-    // DRAW PLAYER
-    // ============================================================
-    function drawPlayer(screenX, screenY) {
-        const size = PLAYER_SPRITE_SIZE;
-    
-        const px = Math.floor(screenX - size / 2);
-        const py = Math.floor(screenY - size + 4);
-    
-        const sprite = getPlayerSprite();
-    
-        drawShadow(ctx, screenX - 7, screenY - 2, 14, 10, {
-            enabled: player.shadow,
-            opacity: 0.22,
-            scale: 1.0,
-            offsetX: 0,
-            offsetY: 0
-        });
-    
-        if (imageReady(sprite)) {
-            ctx.drawImage(sprite, px, py, size, size);
-        }
-    }
+    return preferred;
+}
 
-    // ============================================================
-    // CRISP HTML HUD
-    // ============================================================
-    function updateUI(dt) {
-      if (notificationTime > 0) {
+// ============================================================
+// DRAW PLAYER
+// ============================================================
+
+function drawPlayer(screenX, screenY) {
+    const size = PLAYER_SPRITE_SIZE;
+
+    const px = Math.floor(screenX - size / 2);
+    const py = Math.floor(screenY - size + 4);
+
+    const sprite = getPlayerSprite();
+
+    drawShadow(ctx, screenX - 7, screenY - 2, 14, 10, {
+        enabled: player.shadow,
+        opacity: 0.22,
+        scale: 1.0,
+        offsetX: 0,
+        offsetY: 0
+    });
+
+    if (imageReady(sprite)) {
+        ctx.drawImage(sprite, px, py, size, size);
+    }
+}
+
+// ============================================================
+// UPDATE UI
+// ============================================================
+
+function updateUI(dt) {
+    if (notificationTime > 0) {
         notificationTime -= dt;
 
         if (notificationTime <= 0) {
-          ui.toast.hidden = true;
+            ui.toast.hidden = true;
         }
-      }
-
-      if (!inventoryOpen) {
-        ui.pickup.hidden = !getNearestEgg();
-      }
     }
 
-    // ============================================================
-    // UPDATE
-    // ============================================================
-    function update(dt) {
-      gameTime += dt;
-      updateUI(dt);
+    if (!inventoryOpen) {
+        ui.pickup.hidden = !getNearestEgg();
+    }
+}
 
-      if (inventoryOpen) {
+// ============================================================
+// UPDATE GAME
+// ============================================================
+
+function update(dt) {
+    gameTime += dt;
+    updateUI(dt);
+
+    if (inventoryOpen) {
         player.moving = false;
         player.walkDistance = 0;
         player.walkFrame = 0;
         return;
-      }
+    }
 
-      const inputX =
+    const inputX =
         Number(
-          keys.has("KeyD") ||
-          keys.has("ArrowRight")
+            keys.has("KeyD") ||
+            keys.has("ArrowRight")
         ) -
         Number(
-          keys.has("KeyA") ||
-          keys.has("ArrowLeft")
+            keys.has("KeyA") ||
+            keys.has("ArrowLeft")
         );
 
-      const inputY =
+    const inputY =
         Number(
-          keys.has("KeyS") ||
-          keys.has("ArrowDown")
+            keys.has("KeyS") ||
+            keys.has("ArrowDown")
         ) -
         Number(
-          keys.has("KeyW") ||
-          keys.has("ArrowUp")
+            keys.has("KeyW") ||
+            keys.has("ArrowUp")
         );
 
-      if (inputX === 0 && inputY === 0) {
+    if (inputX === 0 && inputY === 0) {
         player.moving = false;
         player.walkDistance = 0;
         player.walkFrame = 0;
         return;
-      }
+    }
 
-      const length = Math.hypot(inputX, inputY);
+    const length = Math.hypot(inputX, inputY);
 
-      const dx = inputX / length;
-      const dy = inputY / length;
+    const dx = inputX / length;
+    const dy = inputY / length;
 
-      const speed = keys.has("ShiftLeft")
-        ? SPRINT_SPEED
-        : WALK_SPEED;
+    const speed =
+        keys.has("ShiftLeft") || keys.has("ShiftRight")
+            ? SPRINT_SPEED
+            : WALK_SPEED;
 
-      const moveX = dx * speed * dt;
-      const moveY = dy * speed * dt;
+    const moveX = dx * speed * dt;
+    const moveY = dy * speed * dt;
 
-      const previousX = player.x;
-      const previousY = player.y;
+    const previousX = player.x;
+    const previousY = player.y;
 
-      if (canMoveTo(player.x + moveX, player.y)) {
+    if (canMoveTo(player.x + moveX, player.y)) {
         player.x += moveX;
-      }
+    }
 
-      if (canMoveTo(player.x, player.y + moveY)) {
+    if (canMoveTo(player.x, player.y + moveY)) {
         player.y += moveY;
-      }
+    }
 
-      // Vertical direction takes priority on diagonals.
-      if (inputY !== 0) {
+    // Vertical direction takes priority on diagonals.
+    if (inputY !== 0) {
         player.facing = inputY > 0 ? "down" : "up";
-      } else {
+    } else {
         player.facing = inputX > 0 ? "right" : "left";
-      }
+    }
 
-      const distanceMoved = Math.hypot(
+    const distanceMoved = Math.hypot(
         player.x - previousX,
         player.y - previousY
-      );
+    );
 
-      player.moving = distanceMoved > 0.0001;
+    player.moving = distanceMoved > 0.0001;
 
-      if (player.moving) {
+    if (player.moving) {
         player.walkDistance += distanceMoved;
 
         player.walkFrame = Math.floor(
-          player.walkDistance / WALK_FRAME_DISTANCE
+            player.walkDistance / WALK_FRAME_DISTANCE
         ) % 2;
-      } else {
+    } else {
         player.walkDistance = 0;
         player.walkFrame = 0;
-      }
     }
+}
 
-    // ============================================================
-    // DRAW
-    // ============================================================
-    function draw() {
-      const cameraX = Math.round(
+// ============================================================
+// DRAW GAME
+// ============================================================
+
+function draw() {
+    const cameraX = Math.round(
         player.x - canvas.width / 2
-      );
+    );
 
-      const cameraY = Math.round(
+    const cameraY = Math.round(
         player.y - canvas.height / 2
-      );
+    );
 
-      drawGround(cameraX, cameraY);
+    drawGround(cameraX, cameraY);
+    drawPlots(cameraX, cameraY, false);
+    drawEggs(cameraX, cameraY);
 
-      drawPlots(cameraX, cameraY, false);
-
-      drawEggs(cameraX, cameraY);
-
-      // Ground-depth sorting.
-      const trees = getTreesInBounds(
+    // Get visible trees.
+    const trees = getTreesInBounds(
         cameraX - TREE_SIZE,
         cameraY - TREE_SIZE,
         cameraX + canvas.width + TREE_SIZE,
         cameraY + canvas.height + TREE_SIZE
-      );
+    );
 
-      for (const tree of trees) {
+    // Trees behind the player.
+    for (const tree of trees) {
         if (tree.y <= player.y) {
-          drawTree(tree, cameraX, cameraY);
+            drawTree(tree, cameraX, cameraY);
         }
-      }
+    }
 
-      drawPlayer(
+    drawPlayer(
         Math.floor(canvas.width / 2),
         Math.floor(canvas.height / 2)
-      );
+    );
 
-      for (const tree of trees) {
+    // Trees in front of the player.
+    for (const tree of trees) {
         if (tree.y > player.y) {
-          drawTree(tree, cameraX, cameraY);
+            drawTree(tree, cameraX, cameraY);
         }
-      }
-
-      drawPlots(cameraX, cameraY, true);
-      drawHitboxes(cameraX, cameraY);
     }
 
-    // ============================================================
-    // GAME LOOP
-    // ============================================================
-    let lastTime = performance.now();
+    drawPlots(cameraX, cameraY, true);
 
-    function gameLoop(now) {
-      const dt = Math.min(
+    // Developer mode draws hitboxes on top.
+    drawHitboxes(cameraX, cameraY);
+}
+
+// ============================================================
+// GAME LOOP
+// ============================================================
+
+let lastTime = performance.now();
+
+function gameLoop(now) {
+    const dt = Math.min(
         (now - lastTime) / 1000,
         0.05
-      );
+    );
 
-      lastTime = now;
+    lastTime = now;
 
-      update(dt);
-      draw();
-
-      requestAnimationFrame(gameLoop);
-    }
+    update(dt);
+    draw();
 
     requestAnimationFrame(gameLoop);
+}
 
-    // ============================================================
-    // TREE PUNCHING
-    // ============================================================
-    async function punchTree(tree) {
-      // Prevent animations from overlapping.
-      if (tree.punching) return;
+requestAnimationFrame(gameLoop);
 
-      tree.punching = true;
+// ============================================================
+// CONTROLS
+// ============================================================
 
-      try {
-        for (let i = 0; i < 3; i++) {
-          tree.shakeOffsetY = 5;
+window.addEventListener("keydown", (event) => {
 
-          await new Promise(resolve =>
-            setTimeout(resolve, 100)
-          );
-
-          tree.shakeOffsetY = 0;
-
-          await new Promise(resolve =>
-            setTimeout(resolve, 100)
-          );
-        }
-      } finally {
-        tree.shakeOffsetY = 0;
-        tree.punching = false;
-      }
-    }
-
-    function getNearestTree() {
-      let nearest = null;
-
-      let nearestDistanceSq =
-        TREE_PUNCH_DISTANCE * TREE_PUNCH_DISTANCE;
-
-      const trees = getTreesInBounds(
-        player.x - TREE_PUNCH_DISTANCE,
-        player.y - TREE_PUNCH_DISTANCE,
-        player.x + TREE_PUNCH_DISTANCE,
-        player.y + TREE_PUNCH_DISTANCE
-      );
-
-      for (const tree of trees) {
-        const dx = tree.x - player.x;
-        const dy = tree.y - player.y;
-
-        const distanceSq = dx * dx + dy * dy;
-
-        if (distanceSq <= nearestDistanceSq) {
-          nearest = tree;
-          nearestDistanceSq = distanceSq;
-        }
-      }
-
-      return nearest;
-    }
-
-    // ============================================================
-    // CONTROLS
-    // ============================================================
-    window.addEventListener("keydown", (event) => {
-      // CTRL + O: Developer Mode
-      if (event.ctrlKey && event.code === "KeyO") {
+    // CTRL + O toggles developer mode.
+    if (event.ctrlKey && event.code === "KeyO") {
         event.preventDefault();
 
         if (!event.repeat) {
-          developerMode = !developerMode;
+            developerMode = !developerMode;
 
-          console.log(
-            "Developer Mode:",
-            developerMode ? "ON" : "OFF"
-          );
+            console.log(
+                "Developer Mode:",
+                developerMode ? "ON" : "OFF"
+            );
         }
 
         return;
-      }
+    }
 
-      if (
+    if (
         [
-          "ArrowUp",
-          "ArrowDown",
-          "ArrowLeft",
-          "ArrowRight",
-          "Space"
+            "ArrowUp",
+            "ArrowDown",
+            "ArrowLeft",
+            "ArrowRight",
+            "Space"
         ].includes(event.code)
-      ) {
+    ) {
         event.preventDefault();
-      }
+    }
 
-      // E opens or closes inventory.
-      if (
+    // E opens and closes inventory.
+    if (
         event.code === "KeyE" ||
         event.code === "Escape"
-      ) {
+    ) {
         event.preventDefault();
 
         if (!event.repeat) {
-          if (event.code === "KeyE") {
-            toggleInventory();
-          } else if (inventoryOpen) {
-            toggleInventory(false);
-          }
+            if (event.code === "KeyE") {
+                toggleInventory();
+            } else if (inventoryOpen) {
+                toggleInventory(false);
+            }
         }
 
         return;
-      }
+    }
 
-      if (inventoryOpen) return;
+    if (inventoryOpen) return;
 
-      // X punches a nearby tree.
-      if (event.code === "KeyX") {
+    // X punches the nearest tree.
+    if (event.code === "KeyX") {
         event.preventDefault();
 
         if (!event.repeat) {
-          const tree = getNearestTree();
+            const tree = getNearestTree();
 
-          if (tree) {
-            punchTree(tree);
-          }
+            if (tree) {
+                punchTree(tree);
+            }
         }
 
         return;
-      }
+    }
 
-      // C collects a nearby egg.
-      if (event.code === "KeyC") {
+    // C collects a nearby egg.
+    if (event.code === "KeyC") {
         event.preventDefault();
 
         if (!event.repeat) {
-          collectNearbyEgg();
+            collectNearbyEgg();
         }
 
         return;
-      }
+    }
 
-      // Preserve forward-left and forward-right sprites.
-      if (!keys.has(event.code)) {
+    // Preserve forward-left and forward-right sprites.
+    if (!keys.has(event.code)) {
         if (
-          event.code === "KeyD" ||
-          event.code === "ArrowRight"
+            event.code === "KeyD" ||
+            event.code === "ArrowRight"
         ) {
-          player.forwardSide = "right";
+            player.forwardSide = "right";
         } else if (
-          event.code === "KeyA" ||
-          event.code === "ArrowLeft"
+            event.code === "KeyA" ||
+            event.code === "ArrowLeft"
         ) {
-          player.forwardSide = "left";
+            player.forwardSide = "left";
         }
-      }
+    }
 
-      keys.add(event.code);
-    });
+    keys.add(event.code);
+});
 
-    window.addEventListener("keyup", (event) => {
-      keys.delete(event.code);
-    });
+window.addEventListener("keyup", (event) => {
+    keys.delete(event.code);
+});
 
-    window.addEventListener("blur", () => {
-      keys.clear();
-      player.moving = false;
-      player.walkDistance = 0;
-      player.walkFrame = 0;
-    });
+window.addEventListener("blur", () => {
+    keys.clear();
 
-    // ============================================================
-    // HITBOX RENDERING
-    // ============================================================
-    function drawHitboxes(cameraX, cameraY) {
-      if (!developerMode) return;
+    player.moving = false;
+    player.walkDistance = 0;
+    player.walkFrame = 0;
+});
 
-      ctx.save();
-      ctx.lineWidth = 1;
+// ============================================================
+// DEVELOPER HITBOX RENDERING
+// ============================================================
 
-      // PLAYER HITBOX (RED)
-      ctx.strokeStyle = "#ff0000";
+function drawHitboxes(cameraX, cameraY) {
+    if (!developerMode) return;
 
-      ctx.strokeRect(
+    ctx.save();
+    ctx.lineWidth = 1;
+
+    // PLAYER HITBOX - RED
+    ctx.strokeStyle = "#ff0000";
+
+    ctx.strokeRect(
         Math.round(player.x - player.width / 2 - cameraX),
         Math.round(player.y - player.height / 2 - cameraY),
         player.width,
         player.height
-      );
+    );
 
-      // TREE HITBOXES (BLUE)
-      const trees = getTreesInBounds(
+    // TREE HITBOXES - BLUE
+    const trees = getTreesInBounds(
         cameraX - TREE_SIZE,
         cameraY - TREE_SIZE,
         cameraX + canvas.width + TREE_SIZE,
         cameraY + canvas.height + TREE_SIZE
-      );
+    );
 
-      ctx.strokeStyle = "#0088ff";
+    ctx.strokeStyle = "#0088ff";
 
-      for (const tree of trees) {
+    for (const tree of trees) {
         ctx.strokeRect(
-          Math.round(
-            tree.x - TREE_TRUNK_HALF_WIDTH - cameraX
-          ),
-          Math.round(
-            tree.y - TREE_TRUNK_DEPTH - cameraY
-          ),
-          TREE_TRUNK_HALF_WIDTH * 2,
-          TREE_TRUNK_DEPTH
+            Math.round(
+                tree.x - TREE_TRUNK_HALF_WIDTH - cameraX
+            ),
+            Math.round(
+                tree.y - TREE_TRUNK_DEPTH - cameraY
+            ),
+            TREE_TRUNK_HALF_WIDTH * 2,
+            TREE_TRUNK_DEPTH
         );
-      }
-
-      // PEDESTAL HITBOXES (YELLOW)
-      ctx.strokeStyle = "#ffff00";
-
-      const firstX = Math.floor(
-        (cameraX - PLOT_ORIGIN_X - PLOT_WIDTH) / PLOT_STEP_X
-      );
-
-      const lastX = Math.floor(
-        (cameraX + canvas.width - PLOT_ORIGIN_X) / PLOT_STEP_X
-      );
-
-      const firstY = Math.floor(
-        (cameraY - PLOT_ORIGIN_Y - PLOT_HEIGHT) / PLOT_STEP_Y
-      );
-
-      const lastY = Math.floor(
-        (cameraY + canvas.height - PLOT_ORIGIN_Y) / PLOT_STEP_Y
-      );
-
-      for (let plotY = firstY; plotY <= lastY; plotY++) {
-        for (let plotX = firstX; plotX <= lastX; plotX++) {
-          const worldX =
-            PLOT_ORIGIN_X + plotX * PLOT_STEP_X;
-
-          const worldY =
-            PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y;
-
-          for (let row = 0; row < PLOT_ROWS; row++) {
-            for (let col = 0; col < PLOT_COLUMNS; col++) {
-              const x = worldX +
-                (PLOT_PADDING + col * PEDESTAL_STEP) *
-                TILE_SIZE;
-
-              const y = worldY +
-                (PLOT_PADDING + row * PEDESTAL_STEP) *
-                TILE_SIZE +
-                TILE_SIZE -
-                PEDESTAL_HITBOX_HEIGHT;
-
-              ctx.strokeRect(
-                Math.round(x - cameraX),
-                Math.round(y - cameraY),
-                TILE_SIZE,
-                PEDESTAL_HITBOX_HEIGHT
-              );
-            }
-          }
-        }
-      }
-
-      ctx.restore();
     }
-  </script>
+
+    // PEDESTAL HITBOXES - YELLOW
+    ctx.strokeStyle = "#ffff00";
+
+    const firstX = Math.floor(
+        (cameraX - PLOT_ORIGIN_X - PLOT_WIDTH) / PLOT_STEP_X
+    );
+
+    const lastX = Math.floor(
+        (cameraX + canvas.width - PLOT_ORIGIN_X) / PLOT_STEP_X
+    );
+
+    const firstY = Math.floor(
+        (cameraY - PLOT_ORIGIN_Y - PLOT_HEIGHT) / PLOT_STEP_Y
+    );
+
+    const lastY = Math.floor(
+        (cameraY + canvas.height - PLOT_ORIGIN_Y) / PLOT_STEP_Y
+    );
+
+    for (let plotY = firstY; plotY <= lastY; plotY++) {
+        for (let plotX = firstX; plotX <= lastX; plotX++) {
+            const worldX =
+                PLOT_ORIGIN_X + plotX * PLOT_STEP_X;
+
+            const worldY =
+                PLOT_ORIGIN_Y + plotY * PLOT_STEP_Y;
+
+            for (let row = 0; row < PLOT_ROWS; row++) {
+                for (let col = 0; col < PLOT_COLUMNS; col++) {
+                    const x = worldX +
+                        (
+                            PLOT_PADDING +
+                            col * PEDESTAL_STEP
+                        ) * TILE_SIZE;
+
+                    const y = worldY +
+                        (
+                            PLOT_PADDING +
+                            row * PEDESTAL_STEP
+                        ) * TILE_SIZE +
+                        TILE_SIZE -
+                        PEDESTAL_HITBOX_HEIGHT;
+
+                    ctx.strokeRect(
+                        Math.round(x - cameraX),
+                        Math.round(y - cameraY),
+                        TILE_SIZE,
+                        PEDESTAL_HITBOX_HEIGHT
+                    );
+                }
+            }
+        }
+    }
+
+    ctx.restore();
+}
+
+</script>
 </body>
 </html>
