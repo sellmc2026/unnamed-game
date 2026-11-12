@@ -1552,18 +1552,35 @@ function drawPlayer(screenX, screenY) {
 
     const sprite = getPlayerSprite();
 
-    // Center the shadow directly beneath the player's feet
-    const feetX = screenX;
-    const feetY = py + size - 5;
+    // SHADOW SETTINGS
+    const shadowX = screenX;
+    const shadowY = py + size - 2;
+    const shadowWidth = 12;
+    const shadowHeight = 3;
+    const shadowOpacity = 0.22;
 
-    drawShadow(ctx, feetX - 10, feetY - 9, 20, 25, {
-        enabled: player.shadow,
-        opacity: 0.22,
-        scale: 1.25,
-        offsetX: 3,
-        offsetY: 1
-    });
+    // Draw shadow directly beneath the player's feet
+    if (player.shadow) {
+        ctx.save();
 
+        ctx.fillStyle = `rgba(0, 0, 0, ${shadowOpacity})`;
+
+        ctx.beginPath();
+        ctx.ellipse(
+            shadowX,
+            shadowY,
+            shadowWidth,
+            shadowHeight,
+            0,
+            0,
+            Math.PI * 2
+        );
+
+        ctx.fill();
+        ctx.restore();
+    }
+
+    // Draw player
     if (imageReady(sprite)) {
         ctx.drawImage(sprite, px, py, size, size);
     }
