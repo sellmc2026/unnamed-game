@@ -1569,25 +1569,12 @@ function drawPlayer(screenX, screenY) {
 
     const sprite = getPlayerSprite();
 
-    // Shadow settings
-    const shadowWidth = 10;
-    const shadowHeight = 4;
+    // FIXED SHADOW SETTINGS
+    const shadowX = screenX;
+    const shadowY = screenY + 1;
+    const shadowWidth = 7;
+    const shadowHeight = 2.5;
     const shadowOpacity = 0.22;
-
-    // Position based on the sprite's feet
-    let shadowX = screenX;
-
-    if (player.facing === "right") {
-        shadowX = screenX - 3;
-    } else if (player.facing === "left") {
-        shadowX = screenX + 3;
-    } else if (player.facing === "down") {
-        shadowX = screenX;
-    } else if (player.facing === "up") {
-        shadowX = screenX;
-    }
-
-    const shadowY = py + size - 3;
 
     if (player.shadow) {
         ctx.save();
