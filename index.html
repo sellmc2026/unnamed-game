@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1557,12 +1556,12 @@ function drawPlayer(screenX, screenY) {
     const feetX = screenX;
     const feetY = py + size - 5;
 
-    drawShadow(ctx, feetX - 10, feetY - 9, 20, 9, {
+    drawShadow(ctx, feetX - 10, feetY - 9, 20, 13, {
         enabled: player.shadow,
         opacity: 0.22,
         scale: 1.25,
         offsetX: 0,
-        offsetY: 5
+        offsetY: 4
     });
 
     if (imageReady(sprite)) {
