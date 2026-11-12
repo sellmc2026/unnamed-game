@@ -292,7 +292,7 @@ const PLOT_ORIGIN_X = -PLOT_WIDTH / 2;
 const PLOT_ORIGIN_Y = -PLOT_HEIGHT / 2;
 
 // EGGS
-const EGG_RARITY = 1200;
+const EGG_RARITY = 700;
 const EGG_PICKUP_DISTANCE = 25;
 
 // TREES
@@ -1553,10 +1553,14 @@ function drawPlayer(screenX, screenY) {
 
     const sprite = getPlayerSprite();
 
-    drawShadow(ctx, screenX - 7, screenY - 2, 14, 10, {
+    // Center the shadow directly beneath the player's feet
+    const feetX = screenX;
+    const feetY = py + size - 5;
+
+    drawShadow(ctx, feetX - 10, feetY - 9, 20, 9, {
         enabled: player.shadow,
         opacity: 0.22,
-        scale: 1.0,
+        scale: 0.9,
         offsetX: 0,
         offsetY: 0
     });
