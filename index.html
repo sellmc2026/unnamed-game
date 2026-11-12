@@ -1553,13 +1553,12 @@ function drawPlayer(screenX, screenY) {
     const sprite = getPlayerSprite();
 
     // SHADOW SETTINGS
-    const shadowX = screenX;
+    const shadowX = screenX - 2;
     const shadowY = py + size - 2;
-    const shadowWidth = 12;
-    const shadowHeight = 3;
+    const shadowWidth = 8;
+    const shadowHeight = 2.5;
     const shadowOpacity = 0.22;
 
-    // Draw shadow directly beneath the player's feet
     if (player.shadow) {
         ctx.save();
 
@@ -1580,7 +1579,6 @@ function drawPlayer(screenX, screenY) {
         ctx.restore();
     }
 
-    // Draw player
     if (imageReady(sprite)) {
         ctx.drawImage(sprite, px, py, size, size);
     }
