@@ -1025,55 +1025,64 @@ function isTreeSolid(x, y) {
     return false;
 }
 
-// ============================================================
-// TREE PUNCH ANIMATION
-// ============================================================
+
+ // ============================================================
+ // TREE PUNCH ANIMATION
+ // ============================================================
+
+let treePunchSequence = 0;
 
 function punchTree(tree) {
     if (!tree || tree.punching) return;
 
     tree.punching = true;
 
-    let flip = false;
-
-    if (player.facing === "down") {
-        flip = false;
-    } else if (player.facing === "up") {
-        flip = true;
-    } else {
-        flip = player.x < tree.x;
-    }
-
-    const image = new Image();
+    // Preserve directional flipping.
+    const flip = player.facing === "up" ||
+        (player.facing !== "down" && player.x < tree.x);
 
     const animation = {
-        image: image,
-        flip: flip,
-        startedAt: gameTime,
-        ready: false
+        image: null,
+        flip,
+        startedAt: performance.now(),
+        ready: false,
+        failed: false
     };
 
     tree.animation = animation;
+
+    const image = new Image();
+    animation.image = image;
 
     image.onload = () => {
         if (tree.animation !== animation) return;
 
         animation.ready = true;
-        animation.startedAt = gameTime;
+        animation.startedAt = performance.now();
     };
 
     image.onerror = () => {
-        console.error("Failed to load:", TREE_PUNCH_GIF);
+        if (tree.animation !== animation) return;
 
-        if (tree.animation === animation) {
-            tree.animation = null;
-            tree.punching = false;
-        }
+        console.error(
+            "Could not load tree punch GIF:",
+            TREE_PUNCH_GIF
+        );
+
+        animation.failed = true;
     };
 
+    // Restart the GIF from its first frame on each punch.
+    const separator = TREE_PUNCH_GIF.includes("?")
+        ? "&"
+        : "?";
+
     image.src = TREE_PUNCH_GIF +
-        "?punch=" + Date.now() + "-" + Math.random();
+        separator +
+        "replay=" + (++treePunchSequence);
 }
+
+    
 // ============================================================
 // FIND NEAREST TREE
 // ============================================================
@@ -1110,41 +1119,62 @@ function getNearestTree() {
 // DRAW TREE
 // ============================================================
 
+
 function drawTree(tree, cameraX, cameraY) {
     const x = Math.round(tree.x - cameraX);
     const y = Math.round(tree.y - cameraY);
 
     let texture = treeTexture;
     let flip = false;
+    let shakeOffset = 0;
 
     const animation = tree.animation;
 
     if (animation) {
-        const elapsed = gameTime - animation.startedAt;
+        const elapsed =
+            (performance.now() - animation.startedAt) / 1000;
 
         if (elapsed >= TREE_PUNCH_DURATION) {
             tree.animation = null;
             tree.punching = false;
-        } else if (animation.ready && imageReady(animation.image)) {
+
+            animation.image.onload = null;
+            animation.image.onerror = null;
+
+        } else if (
+            animation.ready &&
+            imageReady(animation.image)
+        ) {
             texture = animation.image;
             flip = animation.flip;
+
+        } else {
+            // Fallback shake while loading or if GIF fails.
+            const progress = elapsed / TREE_PUNCH_DURATION;
+
+            shakeOffset = Math.round(
+                Math.sin(progress * Math.PI * 6) *
+                (1 - progress) *
+                3
+            );
         }
     }
 
     if (!imageReady(texture)) return;
 
     // TREE SHADOW
+    // Stays fixed to the trunk.
     const shadowX = x;
     const shadowY = y - 8;
     const shadowWidth = 16;
     const shadowHeight = 10;
-    const shadowOpacity = 0.22;
 
     ctx.save();
 
-    ctx.fillStyle = `rgba(0, 0, 0, ${shadowOpacity})`;
+    ctx.fillStyle = "rgba(0, 0, 0, 0.22)";
 
     ctx.beginPath();
+
     ctx.ellipse(
         shadowX,
         shadowY,
@@ -1154,36 +1184,31 @@ function drawTree(tree, cameraX, cameraY) {
         0,
         Math.PI * 2
     );
-    ctx.fill();
 
+    ctx.fill();
     ctx.restore();
 
     // TREE SPRITE
+    // Both directions use the exact same anchor.
     ctx.save();
 
-    if (flip) {
-        ctx.translate(x, 0);
-        ctx.scale(-1, 1);
+    ctx.translate(x + shakeOffset, y);
 
-        ctx.drawImage(
-            texture,
-            -TREE_SIZE / 2,
-            y - TREE_SIZE,
-            TREE_SIZE,
-            TREE_SIZE
-        );
-    } else {
-        ctx.drawImage(
-            texture,
-            x - TREE_SIZE / 2,
-            y - TREE_SIZE,
-            TREE_SIZE,
-            TREE_SIZE
-        );
+    if (flip) {
+        ctx.scale(-1, 1);
     }
+
+    ctx.drawImage(
+        texture,
+        -TREE_SIZE / 2,
+        -TREE_SIZE,
+        TREE_SIZE,
+        TREE_SIZE
+    );
 
     ctx.restore();
 }
+
 
 // ============================================================
 // PLAYER MOVEMENT COLLISION
