@@ -1058,12 +1058,20 @@ function isTreeSolid(x, y) {
     return false;
 }
 
-
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 // ============================================================
 // TREE PUNCH ANIMATION
 // ============================================================
 
 function punchTree(tree) {
+    // Start player punching animation.
+    if (player.facing === "left") {    
+        player.punching = true;
+        player.punchStartedAt = performance.now();
+    }
+
+    await sleep(500);
+    
     if (!tree || tree.punching) return;
 
     // Don't begin until tree animation frames are loaded.
@@ -1085,9 +1093,7 @@ function punchTree(tree) {
         flip
     };
 
-    // Start player punching animation.
-    player.punching = true;
-    player.punchStartedAt = performance.now();
+    
 }
 
 // ============================================================
