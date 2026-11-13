@@ -1064,32 +1064,28 @@ function isTreeSolid(x, y) {
 function punchTree(tree) {
     if (!tree || tree.punching) return;
 
-    // Do not begin until all frames have loaded; the PNG remains visible.
+    // Don't begin until tree animation frames are loaded.
     if (!treePunchFrames.every(imageReady)) return;
 
     let flip = false;
+
     if (player.facing === "up") {
         flip = true;
     } else if (player.facing !== "down") {
         flip = player.x < tree.x;
     }
 
-    const frame = Math.floor(gameTime * 10) % 10;
-
-    drawPlayerSpriteFrame(
-        malePunching,
-        frame,
-        px,
-        py,
-        PLAYER_SPRITE_SIZE
-    );
-
-    // Do NOT change tree.x/tree.y or remove the tree object/hitbox.
+    // Start tree animation.
     tree.punching = true;
+
     tree.animation = {
         startedAt: performance.now(),
         flip
     };
+
+    // Start player punching animation.
+    player.punching = true;
+    player.punchStartedAt = performance.now();
 }
 
 // ============================================================
@@ -1388,30 +1384,51 @@ function drawPlayer(screenX, screenY) {
     const shadowHeight = 4;
     const shadowOpacity = 0.22;
 
-    if (player.shadow) {
-        ctx.save();
-
-        ctx.fillStyle = `rgba(0, 0, 0, ${shadowOpacity})`;
-
-        ctx.beginPath();
-        ctx.ellipse(
-            shadowX,
-            shadowY,
-            shadowWidth,
-            shadowHeight,
-            0,
-            0,
-            Math.PI * 2
-        );
-
-        ctx.fill();
-        ctx.restore();
+    if (player.punching) {
+        const elapsed = performance.now() - player.punchStartedAt;
+    
+        const frame = Math.floor(elapsed / 100);
+    
+        if (frame < 10 && imageReady(malePunching)) {
+            ctx.drawImage(
+                malePunching,
+                frame * 16, 0,
+                16, 16,
+                px, py,
+                PLAYER_SPRITE_SIZE,
+                PLAYER_SPRITE_SIZE
+            );
+    
+            return;
+        }
+    
+        player.punching = false;
     }
-
-    if (imageReady(sprite)) {
-        ctx.drawImage(sprite, px, py, size, size);
+    
+        if (player.shadow) {
+            ctx.save();
+    
+            ctx.fillStyle = `rgba(0, 0, 0, ${shadowOpacity})`;
+    
+            ctx.beginPath();
+            ctx.ellipse(
+                shadowX,
+                shadowY,
+                shadowWidth,
+                shadowHeight,
+                0,
+                0,
+                Math.PI * 2
+            );
+    
+            ctx.fill();
+            ctx.restore();
+        }
+    
+        if (imageReady(sprite)) {
+            ctx.drawImage(sprite, px, py, size, size);
+        }
     }
-}
 
 // ============================================================
 // UPDATE UI
