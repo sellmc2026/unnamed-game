@@ -1032,55 +1032,53 @@ function isTreeSolid(x, y) {
 
 let treePunchSequence = 0;
 
+
+let treePunchSequence = 0;
+
 function punchTree(tree) {
     if (!tree || tree.punching) return;
 
     tree.punching = true;
 
-    // Preserve directional flipping.
-    const flip = player.facing === "up" ||
-        (player.facing !== "down" && player.x < tree.x);
+    let flip = false;
+
+    if (player.facing === "down") {
+        flip = false;
+    } else if (player.facing === "up") {
+        flip = true;
+    } else {
+        flip = player.x < tree.x;
+    }
 
     const animation = {
-        image: null,
-        flip,
-        startedAt: performance.now(),
-        ready: false,
-        failed: false
+        image: new Image(),
+        flip: flip,
+        startedAt: 0,
+        ready: false
     };
 
     tree.animation = animation;
 
-    const image = new Image();
-    animation.image = image;
-
-    image.onload = () => {
+    animation.image.onload = () => {
         if (tree.animation !== animation) return;
 
         animation.ready = true;
         animation.startedAt = performance.now();
     };
 
-    image.onerror = () => {
+    animation.image.onerror = () => {
         if (tree.animation !== animation) return;
 
-        console.error(
-            "Could not load tree punch GIF:",
-            TREE_PUNCH_GIF
-        );
-
-        animation.failed = true;
+        tree.animation = null;
+        tree.punching = false;
     };
 
-    // Restart the GIF from its first frame on each punch.
-    const separator = TREE_PUNCH_GIF.includes("?")
-        ? "&"
-        : "?";
-
-    image.src = TREE_PUNCH_GIF +
-        separator +
-        "replay=" + (++treePunchSequence);
+    // Fresh URL makes the GIF restart from frame one.
+    animation.image.src =
+        TREE_PUNCH_GIF +
+        "?play=" + (++treePunchSequence);
 }
+
 
     
 // ============================================================
@@ -1120,55 +1118,34 @@ function getNearestTree() {
 // ============================================================
 
 
+
 function drawTree(tree, cameraX, cameraY) {
     const x = Math.round(tree.x - cameraX);
     const y = Math.round(tree.y - cameraY);
 
     let texture = treeTexture;
     let flip = false;
-    let shakeOffset = 0;
 
     const animation = tree.animation;
 
-    if (animation) {
+    if (animation && animation.ready) {
         const elapsed =
             (performance.now() - animation.startedAt) / 1000;
 
-        if (elapsed >= TREE_PUNCH_DURATION) {
-            tree.animation = null;
-            tree.punching = false;
-
-            animation.image.onload = null;
-            animation.image.onerror = null;
-
-        } else if (
-            animation.ready &&
-            imageReady(animation.image)
-        ) {
+        if (elapsed < TREE_PUNCH_DURATION) {
+            // Replace original PNG with GIF.
             texture = animation.image;
             flip = animation.flip;
-
         } else {
-            // Fallback shake while loading or if GIF fails.
-            const progress = elapsed / TREE_PUNCH_DURATION;
-
-            shakeOffset = Math.round(
-                Math.sin(progress * Math.PI * 6) *
-                (1 - progress) *
-                3
-            );
+            // GIF finished. Restore original PNG.
+            tree.animation = null;
+            tree.punching = false;
         }
     }
 
     if (!imageReady(texture)) return;
 
-    // TREE SHADOW
-    // Stays fixed to the trunk.
-    const shadowX = x;
-    const shadowY = y - 8;
-    const shadowWidth = 16;
-    const shadowHeight = 10;
-
+    // TREE SHADOW - FIXED POSITION
     ctx.save();
 
     ctx.fillStyle = "rgba(0, 0, 0, 0.22)";
@@ -1176,10 +1153,10 @@ function drawTree(tree, cameraX, cameraY) {
     ctx.beginPath();
 
     ctx.ellipse(
-        shadowX,
-        shadowY,
-        shadowWidth,
-        shadowHeight,
+        x,
+        y - 8,
+        16,
+        10,
         0,
         0,
         Math.PI * 2
@@ -1188,11 +1165,11 @@ function drawTree(tree, cameraX, cameraY) {
     ctx.fill();
     ctx.restore();
 
-    // TREE SPRITE
-    // Both directions use the exact same anchor.
+    // DRAW ORIGINAL TREE OR ANIMATED GIF
     ctx.save();
 
-    ctx.translate(x + shakeOffset, y);
+    // Anchor at the tree's original position.
+    ctx.translate(x, y);
 
     if (flip) {
         ctx.scale(-1, 1);
@@ -1208,6 +1185,7 @@ function drawTree(tree, cameraX, cameraY) {
 
     ctx.restore();
 }
+
 
 
 // ============================================================
