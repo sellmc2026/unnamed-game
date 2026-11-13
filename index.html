@@ -1385,9 +1385,10 @@ function drawPlayer(screenX, screenY) {
     const shadowOpacity = 0.22;
 
     if (player.punching) {
+        let freezePlayer = true;
         const elapsed = performance.now() - player.punchStartedAt;
     
-        const frame = Math.floor(elapsed / 100);
+        const frame = Math.floor(elapsed / 50);
     
         if (frame < 10 && imageReady(malePunching)) {
             ctx.drawImage(
@@ -1403,6 +1404,7 @@ function drawPlayer(screenX, screenY) {
         }
     
         player.punching = false;
+        freezePlayer = false;
     }
     
         if (player.shadow) {
@@ -1463,6 +1465,10 @@ function update(dt) {
         return;
     }
 
+    if (freezePlayer === true) {
+        return;
+    }
+        
     const inputX =
         Number(
             keys.has("KeyD") ||
@@ -1635,7 +1641,6 @@ window.addEventListener("keydown", (event) => {
             "ArrowDown",
             "ArrowLeft",
             "ArrowRight",
-            "Space"
         ].includes(event.code)
     ) {
         event.preventDefault();
@@ -1662,7 +1667,7 @@ window.addEventListener("keydown", (event) => {
     if (inventoryOpen) return;
 
     // X punches the nearest tree.
-    if (event.code === "KeyX") {
+    if (event.code === "Space") {
         event.preventDefault();
 
         if (!event.repeat) {
@@ -1700,6 +1705,7 @@ window.addEventListener("keydown", (event) => {
         ) {
             player.forwardSide = "left";
         }
+        
     }
 
     keys.add(event.code);
