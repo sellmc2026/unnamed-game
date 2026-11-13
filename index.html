@@ -252,6 +252,8 @@ canvas {
 // SETTINGS
 // ============================================================
 
+let freezePlayer = false;
+
 // DEVELOPER MODE
 let developerMode = false;
 
@@ -1385,7 +1387,7 @@ function drawPlayer(screenX, screenY) {
     const shadowOpacity = 0.22;
 
     if (player.punching) {
-        let freezePlayer = true;
+        freezePlayer = true;
         const elapsed = performance.now() - player.punchStartedAt;
     
         const frame = Math.floor(elapsed / 50);
@@ -1465,7 +1467,8 @@ function update(dt) {
         return;
     }
 
-    if (freezePlayer === true) {
+    if (player.punching) {
+        player.moving = false;
         return;
     }
         
