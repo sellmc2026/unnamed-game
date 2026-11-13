@@ -1064,13 +1064,13 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 // ============================================================
 
 async function punchTree(tree) {
-    // Start player punching animation.
+    // Start player punching animation
     if (player.facing === "left") {    
         player.punching = true;
         player.punchStartedAt = performance.now();
     }
 
-    await sleep(500);
+    await sleep(300);
     
     if (!tree || tree.punching) return;
 
