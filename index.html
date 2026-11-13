@@ -259,7 +259,7 @@ const TILE_SIZE = 16;
 const PIXEL_SCALE = 3;
 const WALK_SPEED = 70;
 const SPRINT_SPEED = 125;
-const PLAYER_SPRITE_SIZE = 32;
+const PLAYER_SPRITE_SIZE = 24;
 const WALK_FRAME_DISTANCE = TILE_SIZE / 1.5;
 
 
@@ -285,6 +285,28 @@ const TREE_PUNCH_DURATION = TREE_PUNCH_FRAME_COUNT / TREE_PUNCH_FPS;
 const INVENTORY_SLOTS = 24;
 const SAVE_KEY = "pixelPetGame.inventory.v2";
 const LEGACY_SAVE_KEY = "pixelPetGame.eggsAndInventory.v1";
+
+// PLAYER PUNCHING ANIMATION
+const malePunching = loadImage(
+    "characters/male/male-punching.png"
+);
+
+
+function drawPlayerSpriteFrame(
+    image, frame, x, y, size = 32
+) {
+    const frameSize = 16;
+
+    ctx.drawImage(
+        image,
+        frame * frameSize, 0,
+        frameSize, frameSize,
+        x, y,
+        size, size
+    );
+}
+
+
 
 // ============================================================
 // SHADOWS
@@ -1051,6 +1073,16 @@ function punchTree(tree) {
     } else if (player.facing !== "down") {
         flip = player.x < tree.x;
     }
+
+    const frame = Math.floor(gameTime * 10) % 10;
+
+    drawPlayerSpriteFrame(
+        malePunching,
+        frame,
+        px,
+        py,
+        PLAYER_SPRITE_SIZE
+    );
 
     // Do NOT change tree.x/tree.y or remove the tree object/hitbox.
     tree.punching = true;
