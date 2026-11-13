@@ -1063,7 +1063,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 // TREE PUNCH ANIMATION
 // ============================================================
 
-function punchTree(tree) {
+async function punchTree(tree) {
     // Start player punching animation.
     if (player.facing === "left") {    
         player.punching = true;
