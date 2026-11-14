@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pixel Pet Game</title>
+<title>Pocket Acres</title>
 <style>
 * { box-sizing: border-box; }
 
@@ -984,36 +984,44 @@ function isTreeSolid(x, y) {
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-// tree punch animation
+let runPunchTreeAnimation = false;
+    
+    
 async function punchTree(tree) {
-    if (player.facing === "left") {    
-        player.punching = true;
-        player.punchStartedAt = performance.now();
+    if (tree.punching === false) {
+        if (player.facing === "left" && player.forwardSide === "left") {    
+            player.punching = true;
+            player.punchStartedAt = performance.now();
+            runPunchTreeAnimation = true;
+        }
     }
 
-    await sleep(300);
+    if (runPunchTreeAnimation === true) { 
+        await sleep(300);
+        
+        if (!tree || tree.punching) return;
     
-    if (!tree || tree.punching) return;
-
-    if (!treePunchFrames.every(imageReady)) return;
-
-    let flip = false;
-
-    if (player.facing === "up") {
-        flip = true;
-    } else if (player.facing !== "down") {
-        flip = player.x < tree.x;
-    }
-
-    tree.punching = true;
-
-    tree.animation = {
-        startedAt: performance.now(),
-        flip
-    };
-
+        if (!treePunchFrames.every(imageReady)) return;
     
+        let flip = false;
+    
+        if (player.facing === "up") {
+            flip = true;
+        } else if (player.facing !== "down") {
+            flip = player.x < tree.x;
+        }
+    
+        tree.punching = true;
+    
+        tree.animation = {
+            startedAt: performance.now(),
+            flip
+        };
+
+        runPunchTreeAnimation = false;
+    } 
 }
+    
 // find nearest tree
 function getNearestTree() {
     let nearest = null;
