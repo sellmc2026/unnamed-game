@@ -989,7 +989,7 @@ let runPunchTreeAnimation = false;
     
 async function punchTree(tree) {
     if (tree.punching === false) {
-        if (player.facing === "down" && player.forwardSide === "left" || player.facing === "left") {    
+        if (player.facing === "down" && player.forwardSide === "left") || player.facing === "left" {    
              if (player.x > tree.x) {
                 player.punching = true;
                 player.punchStartedAt = performance.now();
