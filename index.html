@@ -989,7 +989,7 @@ let runPunchTreeAnimation = false;
     
 async function punchTree(tree) {
     if (tree.punching === false) {
-        if (player.facing === "left" && player.forwardSide === "left") {    
+        if (player.facing === "left" || player.facing === "downLeft") {    
             player.punching = true;
             player.punchStartedAt = performance.now();
             runPunchTreeAnimation = true;
@@ -997,6 +997,7 @@ async function punchTree(tree) {
     }
 
     if (runPunchTreeAnimation === true) { 
+        runPunchTreeAnimation = false;
         await sleep(300);
         
         if (!tree || tree.punching) return;
@@ -1018,7 +1019,7 @@ async function punchTree(tree) {
             flip
         };
 
-        runPunchTreeAnimation = false;
+        
     } 
 }
     
